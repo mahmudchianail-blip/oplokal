@@ -7353,17 +7353,6 @@ Optispar Buchhaltungssystem
                 showNotification('Fehler beim Auto-Backup', 'error');
             }
         }
-        async function restoreAutoSave() {
-            try {
-                const backup = localStorage.getItem('optispar-auto-backup');
-                if (backup) {
-                    const data = JSON.parse(backup);
-                    await importOptisparData(data);
-                }
-            } catch (error) {
-                console.error('Auto import failed:', error);
-            }
-        }
 
         // Smart file loader function
         async function loadFromFolder() {
@@ -7704,16 +7693,8 @@ Optispar Buchhaltungssystem
                 // Check for first time setup
                 checkFirstTimeSetup();
                 
-                // Automatically export and import every 5 seconds
-                setInterval(async () => {
-                    try {
-                        await createAutoSave();
-                        await restoreAutoSave();
-                    } catch (error) {
-                        console.error('Auto export/import failed:', error);
-                    }
-                }, 5000);
-
+                // Setup auto-backup (every 30 minutes)
+                setInterval(createAutoSave, 30 * 60 * 1000);
                 
                 // Setup drag and drop for import
                 setupDragAndDrop();
