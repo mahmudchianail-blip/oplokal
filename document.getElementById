@@ -1668,13 +1668,13 @@
 
     <!-- User Modal -->
     <div id="user-modal" class="modal" data-admin-only>
-        <div class="modal-content p-6" style="width: 100%; max-width: 500px;">
+        <div class="modal-content w-full max-w-md bg-white rounded-xl shadow-2xl p-6">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-xl font-semibold">Benutzer anlegen</h2>
-                <button onclick="closeUserModal()" class="text-gray-500" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+                <button onclick="closeUserModal()" class="text-gray-500 hover:text-gray-700" aria-label="Schließen">&times;</button>
             </div>
-            <form id="user-form">
-                <div class="space-y-4">
+            <form id="user-form" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium mb-2">Name *</label>
                         <input type="text" id="user-name" class="form-input" required>
@@ -1717,19 +1717,21 @@
 
     <!-- Settings Modal -->
     <div id="settings-modal" class="modal">
-        <div class="modal-content p-6" style="width: 100%; max-width: 400px;">
+        <div class="modal-content w-full max-w-md bg-white rounded-xl shadow-2xl p-6">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-xl font-semibold">Einstellungen</h2>
-                <button onclick="closeSettingsModal()" class="text-gray-500" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+                <button onclick="closeSettingsModal()" class="text-gray-500 hover:text-gray-700" aria-label="Schließen">&times;</button>
             </div>
-            <form id="settings-form">
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Neues Passwort</label>
-                        <input type="password" id="settings-password" class="form-input">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Automatisches Logout nach (Minuten)</label>
+            <form id="settings-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Neues Passwort</label>
+                    <input type="password" id="settings-password" class="form-input">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Automatisches Logout nach (Minuten)</label>
+                    <input type="number" id="settings-timeout" class="form-input" min="1">
+                </div>
+                <div class="flex justify-between items-center pt-4">
                         <input type="number" id="settings-timeout" class="form-input" min="1">
                     </div>
                 </div>
