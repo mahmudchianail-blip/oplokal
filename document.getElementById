@@ -1725,13 +1725,20 @@
             <form id="settings-form">
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium mb-2">Neues Passwort *</label>
-                        <input type="password" id="settings-password" class="form-input" required>
+                        <label class="block text-sm font-medium mb-2">Neues Passwort</label>
+                        <input type="password" id="settings-password" class="form-input">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Automatisches Logout nach (Minuten)</label>
+                        <input type="number" id="settings-timeout" class="form-input" min="1">
                     </div>
                 </div>
-                <div class="flex justify-end space-x-4 mt-6">
-                    <button type="button" onclick="closeSettingsModal()" class="btn btn-secondary">Abbrechen</button>
-                    <button type="submit" class="btn btn-blue">Speichern</button>
+                <div class="flex justify-between items-center mt-6">
+                    <button type="button" onclick="logoutUser()" class="btn btn-secondary">Abmelden</button>
+                    <div class="flex space-x-4">
+                        <button type="button" onclick="closeSettingsModal()" class="btn btn-secondary">Abbrechen</button>
+                        <button type="submit" class="btn btn-blue">Speichern</button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -2177,6 +2184,80 @@
     <script>
         // Simple admin login using document.getElementById
         let isAdmin = false;
+        let autoLogoutMinutes = 30;
+        const SESSION_KEY = 'oplokal_session';
+
+        function getStoredTimeout(email) {
+            const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
+            return val ? parseInt(val, 10) : 30;
+        }
+
+        function setStoredTimeout(email, minutes) {
+            localStorage.setItem(`autoLogoutMinutes_${email}`, String(minutes));
+        }
+
+        function saveSession() {
+            if (!app || !app.currentUser) return;
+            localStorage.setItem(SESSION_KEY, JSON.stringify({
+                user: app.currentUser,
+                isAdmin,
+                autoLogoutMinutes,
+                lastActivity: Date.now()
+            }));
+        }
+
+        function restoreSession() {
+            const data = localStorage.getItem(SESSION_KEY);
+            if (!data) return;
+            const session = JSON.parse(data);
+            const timeout = session.autoLogoutMinutes || 30;
+            const elapsed = Date.now() - (session.lastActivity || 0);
+            if (elapsed < timeout * 60000) {
+                isAdmin = session.isAdmin;
+                autoLogoutMinutes = timeout;
+                app.currentUser = session.user;
+                document.getElementById('loginModal').classList.add('hidden');
+                document.getElementById('app').classList.remove('hidden');
+                toggleAdminFeatures();
+                updateActivity();
+            } else {
+                localStorage.removeItem(SESSION_KEY);
+            }
+        }
+
+        function updateActivity() {
+            if (!app || !app.currentUser) return;
+            const session = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}');
+            session.lastActivity = Date.now();
+            session.autoLogoutMinutes = autoLogoutMinutes;
+            session.user = app.currentUser;
+            session.isAdmin = isAdmin;
+            localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+        }
+
+        function logoutUser() {
+            localStorage.removeItem(SESSION_KEY);
+            document.getElementById('app').classList.add('hidden');
+            document.getElementById('loginModal').classList.remove('hidden');
+            document.getElementById('settings-modal').classList.remove('active');
+            isAdmin = false;
+            app.currentUser = null;
+            toggleAdminFeatures();
+        }
+
+        ['click','mousemove','keydown','scroll'].forEach(evt => {
+            document.addEventListener(evt, updateActivity, {passive:true});
+        });
+
+        setInterval(() => {
+            const data = localStorage.getItem(SESSION_KEY);
+            if (!data) return;
+            const session = JSON.parse(data);
+            const timeout = (session.autoLogoutMinutes || 30) * 60000;
+            if (Date.now() - (session.lastActivity || 0) > timeout) {
+                logoutUser();
+            }
+        }, 60000);
 
         document.getElementById('loginBtn').addEventListener('click', async () => {
             const email = document.getElementById('email').value;
@@ -2190,9 +2271,12 @@
             if (user) {
                 isAdmin = user.role === 'admin';
                 app.currentUser = user;
+                autoLogoutMinutes = getStoredTimeout(user.email);
                 document.getElementById('loginModal').classList.add('hidden');
                 document.getElementById('app').classList.remove('hidden');
                 toggleAdminFeatures();
+                saveSession();
+                updateActivity();
             } else {
                 alert('Ungültige Zugangsdaten');
             }
@@ -3721,7 +3805,8 @@
         }
 
         function openSettingsModal() {
-            document.getElementById('settings-form').reset();
+            document.getElementById('settings-password').value = '';
+            document.getElementById('settings-timeout').value = autoLogoutMinutes;
             document.getElementById('settings-modal').classList.add('active');
         }
 
@@ -3729,23 +3814,29 @@
             document.getElementById('settings-modal').classList.remove('active');
         }
 
-        async function handlePasswordChange(e) {
+          async function handleSettingsChange(e) {
             e.preventDefault();
-            const newPass = document.getElementById('settings-password').value.trim();
-            if (!app || !app.currentUser || !newPass) {
-                showNotification('Ungültiges Passwort', 'error');
+            if (!app || !app.currentUser) {
+                showNotification('Keine Benutzerinformation', 'error');
                 return;
             }
-            app.currentUser.password = newPass;
-            document.getElementById('settings-form').reset();
-            try {
-                await app.db.put('users', app.currentUser);
-                closeSettingsModal();
-                showNotification('Passwort aktualisiert', 'success');
-            } catch (err) {
-                console.error('Error updating password', err);
-                showNotification('Fehler beim Aktualisieren des Passworts', 'error');
+            const newPass = document.getElementById('settings-password').value.trim();
+            const timeoutValue = parseInt(document.getElementById('settings-timeout').value, 10) || 30;
+            autoLogoutMinutes = timeoutValue;
+            setStoredTimeout(app.currentUser.email, autoLogoutMinutes);
+            if (newPass) {
+                app.currentUser.password = newPass;
+                try {
+                    await app.db.put('users', app.currentUser);
+                } catch (err) {
+                    console.error('Error updating password', err);
+                    showNotification('Fehler beim Aktualisieren des Passworts', 'error');
+                    return;
+                }
             }
+            saveSession();
+            closeSettingsModal();
+            showNotification('Einstellungen gespeichert', 'success');
         }
 
         function openDeleteModal(message, callback) {
@@ -7891,7 +7982,8 @@ Optispar Buchhaltungssystem
             try {
                 app = new OptisparApp();
                 await app.init();
-                
+                restoreSession();
+
                 // Update report stats
                 await updateReportStats();
                 
@@ -7921,7 +8013,7 @@ Optispar Buchhaltungssystem
                 document.getElementById('booking-form').addEventListener('submit', handleBookingSubmit);
                 document.getElementById('product-form').addEventListener('submit', handleProductSubmit);
                 document.getElementById('user-form').addEventListener('submit', handleUserSubmit);
-                document.getElementById('settings-form').addEventListener('submit', handlePasswordChange);
+                document.getElementById('settings-form').addEventListener('submit', handleSettingsChange);
                 // Modal close on outside click
                 document.querySelectorAll('.modal').forEach(modal => {
                     modal.addEventListener('click', (e) => {
