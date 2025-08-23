@@ -2194,7 +2194,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.0.0.2';
+        const APP_VERSION = '0.0.0.3';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -4274,7 +4274,12 @@
 
         async function deleteProduct(productId) {
             try {
-                const product = await app.db.get('waren', productId);
+                                // Normalize ID to support both numeric and string keys
+                const normalizedId = (typeof productId === 'string' && !isNaN(productId))
+                    ? Number(productId)
+                    : productId;
+
+                const product = await app.db.get('waren', normalizedId);
                 if (!product) {
                     showNotification('Produkt nicht gefunden', 'error');
                     return;
@@ -4282,7 +4287,7 @@
                 
                 openDeleteModal(`Möchten Sie das Produkt "${product.name}" wirklich löschen?`, async () => {
                     try {
-                        await app.db.delete('waren', productId);
+                        await app.db.delete('waren', normalizedId);
                         await app.loadWaren();
                         await app.loadDashboard();
                         showNotification(`Produkt "${product.name}" wurde gelöscht`, 'success');
