@@ -6491,16 +6491,16 @@ function preventDoubleSubmit(formId){
                 
                 Object.entries(monthlyData)
                     .sort()
-                    .forEach(([month, data]) => {
-                        const gewinn = data.einnahmen - data.ausgaben;
-                        const trend = gewinn > 0 ? 
-                            (gewinn > 1000 ? '🚀 Sehr gut' : '✅ Positiv') : 
+                    .forEach(([month, monthData]) => {
+                        const gewinn = monthData.einnahmen - monthData.ausgaben;
+                        const trend = gewinn > 0 ?
+                            (gewinn > 1000 ? '🚀 Sehr gut' : '✅ Positiv') :
                             (gewinn < -1000 ? '🚨 Kritisch' : '⚠️ Verlust');
-                        
+
                         data.push([
                             new Date(month + '-01').toLocaleDateString('de-DE', { year: 'numeric', month: 'long' }),
-                            data.einnahmen.toFixed(2),
-                            data.ausgaben.toFixed(2),
+                            monthData.einnahmen.toFixed(2),
+                            monthData.ausgaben.toFixed(2),
                             gewinn.toFixed(2),
                             trend
                         ]);
