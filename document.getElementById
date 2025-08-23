@@ -3462,6 +3462,12 @@ function preventDoubleSubmit(formId){
         }
 
         function openProductModal(productId = null) {
+                        if (!app) {
+                console.warn('App not initialized yet, please wait...');
+                showNotification('System wird noch geladen, bitte warten...', 'warning');
+                return;
+            }
+
             const modal = document.getElementById('product-modal');
             const title = document.getElementById('product-modal-title');
             const submitBtn = document.getElementById('product-submit-btn');
@@ -3514,7 +3520,13 @@ function preventDoubleSubmit(formId){
         }
 
         function closeProductModal() {
-            document.getElementById('product-modal').classList.remove('active');
+                        const modal = document.getElementById('product-modal');
+            modal.classList.remove('active');
+            const form = document.getElementById('product-form');
+            if (form) {
+                form.reset();
+                if (typeof calculateProductPrice === 'function') calculateProductPrice();
+            }
             app.isEditingProduct = false;
             app.currentProduct = null;
         }
