@@ -446,6 +446,15 @@
     </style>
 </head>
 <body class="bg-gray-50">
+    <!-- Simple Login Modal -->
+    <div id="loginModal" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center">
+        <div class="bg-white p-6 rounded-lg shadow-lg w-80">
+            <h2 class="text-xl font-semibold mb-4">Login</h2>
+            <input id="username" type="text" placeholder="Benutzername" class="form-input mb-2" />
+            <input id="password" type="password" placeholder="Passwort" class="form-input mb-4" />
+            <button id="loginBtn" class="btn btn-blue w-full">Anmelden</button>
+        </div>
+    </div>
     <!-- Header -->
     <header class="bg-white shadow-sm border-b">
         <div class="container px-4 py-4">
@@ -460,11 +469,11 @@
                     </div>
                 </div>
                 <div class="flex items-center space-x-2">
-                    <button class="btn btn-red" onclick="openBookingModal('ausgabe')">
+                    <button class="btn btn-red" onclick="openBookingModal('ausgabe')" data-admin-only>
                         <i data-lucide="minus-circle" class="h-4 w-4"></i>
                         Ausgabe buchen
                     </button>
-                    <button class="btn btn-green" onclick="openBookingModal('einnahme')">
+                    <button class="btn btn-green" onclick="openBookingModal('einnahme')" data-admin-only>
                         <i data-lucide="plus-circle" class="h-4 w-4"></i>
                         Einnahme buchen
                     </button>
@@ -764,7 +773,7 @@
             <div class="card p-6">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-xl font-semibold">Lager & Waren</h2>
-                    <button class="btn btn-secondary" onclick="openProductModal()" id="btn-neues-produkt">
+                    <button class="btn btn-secondary" onclick="openProductModal()" id="btn-neues-produkt" data-admin-only>
                         <i data-lucide="plus" class="h-4 w-4"></i>
                         Neues Produkt
                     </button>
@@ -910,8 +919,7 @@
                             <p class="opacity-90">Standardkontenrahmen für kleine und mittlere Unternehmen</p>
                         </div>
                     </div>
-                    <button class="btn btn-secondary" onclick="openKontoModal()" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white;">
-                        <i data-lucide="plus" class="h-4 w-4"></i>
+                    <button class="btn btn-secondary" onclick="openKontoModal()" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white;" data-admin-only>                        <i data-lucide="plus" class="h-4 w-4"></i>
                         Neues Konto
                     </button>
                 </div>
@@ -1231,8 +1239,7 @@
                             <h1 class="text-4xl font-bold mb-2">🛒 Bestellungen</h1>
                             <p class="text-blue-100 text-lg">Verwalten Sie Ihre Bestellungen professionell</p>
                         </div>
-                        <button onclick="openModernBestellungModal()" class="bg-white text-blue-600 hover:bg-blue-50 px-6 py-3 rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl">
-                            <i data-lucide="plus" class="h-5 w-5 inline mr-2"></i>
+                        <button onclick="openModernBestellungModal()" class="bg-white text-blue-600 hover:bg-blue-50 px-6 py-3 rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl" data-admin-only>                            <i data-lucide="plus" class="h-5 w-5 inline mr-2"></i>
                             Neue Bestellung
                         </button>
                     </div>
@@ -2087,10 +2094,37 @@
 
     <!-- JavaScript -->
     <script>
+        // Simple admin login using document.getElementById
+        let isAdmin = false;
+
+        document.getElementById('loginBtn').addEventListener('click', () => {
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            if (user === 'admin' && pass === 'admin') {
+                isAdmin = true;
+                document.getElementById('loginModal').classList.add('hidden');
+                toggleAdminFeatures();
+            } else {
+                alert('Ungültige Zugangsdaten');
+            }
+        });
+
+        function toggleAdminFeatures() {
+            document.querySelectorAll('[data-admin-only]').forEach(el => {
+                el.classList.toggle('hidden', !isAdmin);
+                if ('disabled' in el) {
+                    el.disabled = !isAdmin;
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            toggleAdminFeatures();
+        });
+
         // =====================================
         // === Utility: prevent double form submission ===
-function preventDoubleSubmit(formId){
-    try {
+        function preventDoubleSubmit(formId){    try {
         const form = document.getElementById(formId);
         if(!form) return;
         form.addEventListener('submit', (e) => {
