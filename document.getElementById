@@ -2194,7 +2194,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.0.0.3';
+        const APP_VERSION = '0.02.13.7';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -3071,6 +3071,7 @@
                                     </div>
                                     <div class="text-sm text-gray-500 space-y-1">
                                         <p><i data-lucide="calendar" class="h-3 w-3 inline mr-1"></i>${date} um ${time}</p>
+                                        ${(bewegung.userKuerzel || bewegung.userName) ? `<p><i data-lucide="user" class="h-3 w-3 inline mr-1"></i>${bewegung.userKuerzel || bewegung.userName}</p>` : ''}
                                         <p><i data-lucide="package" class="h-3 w-3 inline mr-1"></i>Menge: <strong>${bewegung.quantity || bewegung.menge}</strong></p>
                                         ${(bewegung.supplier || bewegung.lieferant) ? `<p><i data-lucide="building" class="h-3 w-3 inline mr-1"></i>Lieferant: ${bewegung.supplier || bewegung.lieferant}</p>` : ''}
                                         ${(bewegung.customer || bewegung.kunde) ? `<p><i data-lucide="user" class="h-3 w-3 inline mr-1"></i>Kunde: ${bewegung.customer || bewegung.kunde}</p>` : ''}
@@ -4570,6 +4571,9 @@
                     neuerBestand: newStock,
                     notiz: note,
                     notes: note, // For compatibility
+                    userId: app.currentUser?.id,
+                    userName: app.currentUser?.name,
+                    userKuerzel: app.currentUser?.kuerzel,
                     timestamp: new Date().toISOString(),
                     typ_detail: currentStockAction === 'increase' ? 'Bestandserhöhung' : 'Bestandsreduzierung'
                 };
@@ -4909,6 +4913,9 @@
                     supplier: supplier || '', // For compatibility
                     reference: reference || '', // For compatibility
                     notes: notes || '', // For compatibility
+                    userId: app.currentUser?.id,
+                    userName: app.currentUser?.name,
+                    userKuerzel: app.currentUser?.kuerzel,
                     datum: new Date().toISOString().split('T')[0],
                     timestamp: new Date().toISOString(),
                     automatischeBuchung: autoBooking
@@ -5033,6 +5040,9 @@
                     reference: reference || '', // For compatibility
                     reason: reason || 'sonstiges', // For compatibility
                     notes: notes || '', // For compatibility
+                    userId: app.currentUser?.id,
+                    userName: app.currentUser?.name,
+                    userKuerzel: app.currentUser?.kuerzel,
                     datum: new Date().toISOString().split('T')[0],
                     timestamp: new Date().toISOString(),
                     automatischeBuchung: autoBooking
