@@ -7791,5 +7791,33 @@ Optispar Buchhaltungssystem
   window.addEventListener('unhandledrejection', removeLoaderSafely);
 })();
 </script>
+<!-- Shared data fetch/save functions -->
+<script>
+async function loadSharedData() {
+  try {
+    const res = await fetch('/data');
+    if (res.ok) {
+      window.sharedData = await res.json();
+      console.log('Geladene gemeinsame Daten:', window.sharedData);
+    }
+  } catch (err) {
+    console.error('Fehler beim Laden gemeinsamer Daten', err);
+  }
+}
+
+async function saveSharedData(data) {
+  try {
+    await fetch('/data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+  } catch (err) {
+    console.error('Fehler beim Speichern gemeinsamer Daten', err);
+  }
+}
+
+loadSharedData();
+</script>
 </body>
 </html>
