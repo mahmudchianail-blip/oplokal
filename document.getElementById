@@ -450,11 +450,13 @@
     <div id="loginModal" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center">
         <div class="bg-white p-6 rounded-lg shadow-lg w-80">
             <h2 class="text-xl font-semibold mb-4">Login</h2>
-            <input id="username" type="text" placeholder="Benutzername" class="form-input mb-2" />
+            <input id="email" type="email" placeholder="E-Mail" class="form-input mb-2" />
             <input id="password" type="password" placeholder="Passwort" class="form-input mb-4" />
             <button id="loginBtn" class="btn btn-blue w-full">Anmelden</button>
         </div>
     </div>
+
+ <div id="app" class="hidden">
     <!-- Header -->
     <header class="bg-white shadow-sm border-b">
         <div class="container px-4 py-4">
@@ -2091,18 +2093,19 @@
             <span id="notification-text"></span>
         </div>
     </div>
-
+    </div> <!-- end app -->
     <!-- JavaScript -->
     <script>
         // Simple admin login using document.getElementById
         let isAdmin = false;
 
         document.getElementById('loginBtn').addEventListener('click', () => {
-            const user = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
             const pass = document.getElementById('password').value;
-            if (user === 'admin' && pass === 'admin') {
+            if (email === 'admin@example.com' && pass === 'admin123') {
                 isAdmin = true;
                 document.getElementById('loginModal').classList.add('hidden');
+                document.getElementById('app').classList.remove('hidden');
                 toggleAdminFeatures();
             } else {
                 alert('Ungültige Zugangsdaten');
