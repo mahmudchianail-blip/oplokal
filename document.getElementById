@@ -4710,7 +4710,7 @@ function preventDoubleSubmit(formId){
                 console.log('Movement saved successfully');
                 
                 // Create automatic booking if requested
-                if (autoBooking && price > 0 && reason === 'verkauf') {
+                if (autoBooking && price > 0) {
                     try {
                         await createWarenausgangBooking(movement, product);
                         console.log('Automatic booking created');
@@ -4729,8 +4729,8 @@ function preventDoubleSubmit(formId){
                 
                 closeWarenausgangModal();
                 
-                const message = autoBooking && price > 0 && reason === 'verkauf' ? 
-                    'Warenausgang erfasst und Buchung erstellt!' : 
+                const message = autoBooking && price > 0 ?
+                    'Warenausgang erfasst und Buchung erstellt!' :
                     'Warenausgang erfolgreich erfasst!';
                 showNotification(message, 'success');
                 
@@ -4789,27 +4789,25 @@ function preventDoubleSubmit(formId){
         // Create automatic booking for Warenausgang
         async function createWarenausgangBooking(movement, product) {
             try {
-                // Find appropriate accounts (Umsatzerlöse = 4000, Kasse = 1000)
+                // Find appropriate expense account (Wareneinsatz = 3200)
                 const konten = await app.db.getAll('konten');
-                const umsatzKonto = konten.find(k => k.nummer === 4000) || konten.find(k => k.typ === 'Ertrag');
-                const kasseKonto = konten.find(k => k.nummer === 1000) || konten.find(k => k.typ === 'Aktiv');
-                
-                if (!umsatzKonto || !kasseKonto) {
+                const warenausgangKonto = konten.find(k => k.nummer === 3200) || konten.find(k => k.typ === 'Aufwand');
+
+                if (!warenausgangKonto) {
                     console.warn('Could not find appropriate accounts for automatic booking');
                     return;
                 }
                 
                 const booking = {
                     id: app.db.generateUUID(),
-                    date: new Date().toISOString().split('T')[0],
-                    beschreibung: `Warenverkauf: ${product.name} (${movement.quantity} Stk)`,
+                    beschreibung: `Warenausgang: ${product.name} (${movement.quantity} Stk)`,
                     betrag: movement.totalValue,
-                    typ: 'einnahme', // Income for sale
-                    konto: umsatzKonto.nummer,
-                    mwst: 19, // Default VAT
+                    typ: 'ausgabe',
+                    konto: warenausgangKonto.nummer,
+                    mwst: 19,
                     netto: movement.totalValue / 1.19,
                     mwstBetrag: movement.totalValue - (movement.totalValue / 1.19),
-                    kategorie: 'Warenverkauf',
+                    kategorie: 'Warenausgang',
                     notizen: `Auto-Buchung für Bewegung: ${movement.id}`,
                     timestamp: new Date().toISOString()
                 };
