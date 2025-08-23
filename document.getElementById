@@ -8016,8 +8016,8 @@ Optispar Buchhaltungssystem
                 // Check for first time setup
                 checkFirstTimeSetup();
                 
-                // Setup auto-backup (every 30 minutes)
-                setInterval(createAutoSave, 30 * 60 * 1000);
+                // Auto-backup disabled
+                // setInterval(createAutoSave, 30 * 60 * 1000);
                 
                 // Setup drag and drop for import
                 setupDragAndDrop();
