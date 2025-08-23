@@ -479,7 +479,7 @@
                         <i data-lucide="plus-circle" class="h-4 w-4"></i>
                         Einnahme buchen
                     </button>
-                    <button class="btn btn-blue" onclick="openUserModal()">
+                    <button class="btn btn-blue" onclick="openUserModal()" data-admin-only>
                         <i data-lucide="user-plus" class="h-4 w-4"></i>
                         Nutzer anlegen
                     </button>
@@ -1667,7 +1667,7 @@
     </div>
 
     <!-- User Modal -->
-    <div id="user-modal" class="modal">
+    <div id="user-modal" class="modal" data-admin-only>
         <div class="modal-content p-6" style="width: 100%; max-width: 500px;">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-xl font-semibold">Benutzer anlegen</h2>
@@ -3682,6 +3682,10 @@
         }
 
         function openUserModal() {
+            if (!isAdmin) {
+                showNotification('Keine Berechtigung', 'error');
+                return;
+            }
             const modal = document.getElementById('user-modal');
             document.getElementById('user-form').reset();
             modal.classList.add('active');
@@ -3693,6 +3697,10 @@
 
         async function handleUserSubmit(e) {
             e.preventDefault();
+            if (!isAdmin) {
+                showNotification('Keine Berechtigung', 'error');
+                return;
+            }
             const user = {
                 name: document.getElementById('user-name').value,
                 geburtsdatum: document.getElementById('user-geburtsdatum').value,
