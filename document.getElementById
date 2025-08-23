@@ -6240,27 +6240,10 @@
                     app.loadWaren().then(() => {
                         console.log('✅ Products loaded');
                         
-                        // Falls keine Produkte, erstelle Testprodukt
+                        // Laden vorhandener Produkte
                         app.db.getAll('waren').then(waren => {
                             if (waren.length === 0) {
-                                console.log('📦 Creating test product...');
-                                const testProduct = {
-                                    id: app.db.generateUUID(),
-                                    name: 'LAGER TEST PRODUKT',
-                                    beschreibung: 'Test für + / - Bestand Buttons',
-                                    preis_netto_cent: 10000,
-                                    bestand: 100,
-                                    mindestbestand: 20,
-                                    kategorie: 'Test',
-                                    timestamp: new Date().toISOString()
-                                };
-                                
-                                app.db.add('waren', testProduct).then(() => {
-                                    console.log('✅ Test product created');
-                                    app.loadWaren().then(() => {
-                                        console.log('🎉 Products reloaded with test data');
-                                    });
-                                });
+                                                                console.log('⚠️ No products found in database.');
                             } else {
                                 console.log(`✅ Found ${waren.length} existing products`);
                             }
