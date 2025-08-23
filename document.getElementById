@@ -3166,6 +3166,7 @@ function preventDoubleSubmit(formId){
                             clearRequest.onerror = () => reject(clearRequest.error);
                         });
                     }
+                    await modernBestellungenDB.clearAll();
                 }
 
                 // Import new data
@@ -3192,10 +3193,16 @@ function preventDoubleSubmit(formId){
                         await app.db.add('lagerbewegungen', bewegung);
                     }
                 }
+                if (data.bestellungen && Array.isArray(data.bestellungen)) {
+                    for (const bestellung of data.bestellungen) {
+                        await modernBestellungenDB.add(bestellung);
+                    }
+                }
 
                 // Refresh all data displays
                 await app.loadAll();
                 await updateReportStats();
+                await loadModernBestellungen();
 
             } catch (error) {
                 console.error('Import error:', error);
@@ -5300,6 +5307,16 @@ function preventDoubleSubmit(formId){
                 });
             }
             
+            async clearAll() {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction(['bestellungen'], 'readwrite');
+                    const store = transaction.objectStore('bestellungen');
+                    const request = store.clear();
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+            }
+
             generateUUID() {
                 return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
                     const r = Math.random() * 16 | 0;
@@ -5957,41 +5974,11 @@ function preventDoubleSubmit(formId){
                 const text = await file.text();
                 const data = JSON.parse(text);
                 
-                if (!data.version) {
+                if (!(data.version || data.exportInfo || data.backupInfo)) {
                     throw new Error('Ungültiges Backup-Format');
                 }
                 
-                if (!confirm('Möchten Sie die Daten wirklich importieren? Dies überschreibt alle vorhandenen Daten!')) {
-                    event.target.value = '';
-                    return;
-                }
-                
-                // Clear and import data
-                const stores = ['konten', 'buchungen', 'waren', 'lagerbewegungen'];
-                for (const store of stores) {
-                    // Clear existing data
-                    const transaction = app.db.db.transaction([store], 'readwrite');
-                    const objectStore = transaction.objectStore(store);
-                    await new Promise((resolve) => {
-                        const request = objectStore.clear();
-                        request.onsuccess = () => resolve();
-                        request.onerror = () => resolve(); // Continue even if error
-                    });
-                    
-                    // Import new data
-                    if (data[store] && data[store].length > 0) {
-                        for (const item of data[store]) {
-                            try {
-                                await app.db.put(store, item);
-                            } catch (error) {
-                                console.warn(`Failed to import item in ${store}:`, error);
-                            }
-                        }
-                    }
-                }
-                
-                // Refresh all views
-                await app.refreshAll();
+                await importOptisparData(data);
                 
                 showNotification('Daten wurden erfolgreich importiert', 'success');
                 event.target.value = '';
@@ -7249,6 +7236,7 @@ Optispar Buchhaltungssystem
                 const savedPath = localStorage.getItem('optispar-data-path') || 'Optispar-Daten';
                 
                 const data = {
+                    version: "1.0",
                     exportInfo: {
                         version: "1.0",
                         exported: new Date().toISOString(),
@@ -7259,7 +7247,8 @@ Optispar Buchhaltungssystem
                     konten: await app.db.getAll('konten'),
                     buchungen: await app.db.getAll('buchungen'),
                     waren: await app.db.getAll('waren'),
-                    lagerbewegungen: await app.db.getAll('lagerbewegungen')
+                   lagerbewegungen: await app.db.getAll('lagerbewegungen'),
+                    bestellungen: await modernBestellungenDB.getAll()
                 };
                 
                 // Try to use File System Access API for direct folder access (Chrome/Edge)
@@ -7325,6 +7314,7 @@ Optispar Buchhaltungssystem
         async function createAutoSave() {
             try {
                 const data = {
+                    version: "1.0",
                     backupInfo: {
                         type: "auto-save",
                         created: new Date().toISOString(),
@@ -7333,33 +7323,34 @@ Optispar Buchhaltungssystem
                     konten: await app.db.getAll('konten'),
                     buchungen: await app.db.getAll('buchungen'),
                     waren: await app.db.getAll('waren'),
-                    lagerbewegungen: await app.db.getAll('lagerbewegungen')
+                    lagerbewegungen: await app.db.getAll('lagerbewegungen'),
+                    bestellungen: await modernBestellungenDB.getAll()
                 };
                 
                 // Store in localStorage as backup
                 localStorage.setItem('optispar-auto-backup', JSON.stringify(data));
                 localStorage.setItem('optispar-last-backup', new Date().toISOString());
                 
-                // Try to auto-save to previously selected file
-                const savedFileInfo = localStorage.getItem('optispar-file-handle');
-                if (savedFileInfo && 'showSaveFilePicker' in window) {
-                    try {
-                        // Note: We can't reuse file handles across sessions for security
-                        // This will prompt user for auto-save location
-                        console.log('Auto-backup created and stored locally');
-                        
-                        // Show notification about auto-backup
-                        showNotification('🔄 Auto-Backup erstellt', 'info');
-                        
-                    } catch (error) {
-                        console.error('Auto-save failed:', error);
-                    }
-                }
-                
+
+                // Create downloadable backup file
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                const dateStr = new Date().toISOString().replace(/[:.]/g, '-');
+                link.href = url;
+                link.download = `optispar-backup-${dateStr}.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+
+                showNotification('🔄 Auto-Backup erstellt und heruntergeladen', 'info');
+                updateLastBackupTime();
                 console.log('Auto-backup created:', new Date().toISOString());
-                
+
             } catch (error) {
                 console.error('Auto-backup failed:', error);
+                showNotification('Fehler beim Auto-Backup', 'error');
             }
         }
 
@@ -7384,7 +7375,7 @@ Optispar Buchhaltungssystem
                         const data = JSON.parse(text);
                         
                         // Validate and import
-                        if (data.konten || data.buchungen || data.waren || data.exportInfo) {
+                        if (data.konten || data.buchungen || data.waren || data.bestellungen || data.exportInfo || data.backupInfo) {
                             await importOptisparData(data);
                             showNotification(`✅ Daten aus "${file.name}" erfolgreich geladen!`, 'success');
                             
