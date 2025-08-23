@@ -1724,8 +1724,16 @@
             </div>
             <form id="settings-form" class="space-y-4">
                 <div>
+                    <label class="block text-sm font-medium mb-2">Altes Passwort</label>
+                    <input type="password" id="settings-old-password" class="form-input">
+                </div>
+                <div>
                     <label class="block text-sm font-medium mb-2">Neues Passwort</label>
                     <input type="password" id="settings-password" class="form-input">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Passwort bestätigen</label>
+                    <input type="password" id="settings-confirm-password" class="form-input">
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-2">Automatisches Logout nach (Minuten)</label>
@@ -1740,6 +1748,7 @@
                     </div>
                 </div>
             </form>
+            <p id="app-version" class="text-xs text-gray-400 text-center mt-4"></p>
         </div>
     </div>
 
@@ -2185,6 +2194,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
+        const APP_VERSION = '0.0.0.1';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -3804,7 +3814,9 @@
         }
 
         function openSettingsModal() {
+            document.getElementById('settings-old-password').value = '';
             document.getElementById('settings-password').value = '';
+            document.getElementById('settings-confirm-password').value = '';
             document.getElementById('settings-timeout').value = autoLogoutMinutes;
             document.getElementById('settings-modal').classList.add('active');
         }
@@ -3819,11 +3831,21 @@
                 showNotification('Keine Benutzerinformation', 'error');
                 return;
             }
+            const oldPass = document.getElementById('settings-old-password').value.trim();
             const newPass = document.getElementById('settings-password').value.trim();
+            const confirmPass = document.getElementById('settings-confirm-password').value.trim();
             const timeoutValue = parseInt(document.getElementById('settings-timeout').value, 10) || 30;
             autoLogoutMinutes = timeoutValue;
             setStoredTimeout(app.currentUser.email, autoLogoutMinutes);
-            if (newPass) {
+            if (oldPass || newPass || confirmPass) {
+                if (oldPass !== app.currentUser.password) {
+                    showNotification('Altes Passwort ist falsch', 'error');
+                    return;
+                }
+                if (!newPass || newPass !== confirmPass) {
+                    showNotification('Neue Passwörter stimmen nicht überein', 'error');
+                    return;
+                }
                 app.currentUser.password = newPass;
                 try {
                     await app.db.put('users', app.currentUser);
@@ -3833,6 +3855,9 @@
                     return;
                 }
             }
+            document.getElementById('settings-old-password').value = '';
+            document.getElementById('settings-password').value = '';
+            document.getElementById('settings-confirm-password').value = '';
             saveSession();
             closeSettingsModal();
             showNotification('Einstellungen gespeichert', 'success');
@@ -7982,6 +8007,7 @@ Optispar Buchhaltungssystem
                 app = new OptisparApp();
                 await app.init();
                 restoreSession();
+                document.getElementById('app-version').textContent = `Version ${APP_VERSION}`;
 
                 // Update report stats
                 await updateReportStats();
