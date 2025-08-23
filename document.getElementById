@@ -1709,7 +1709,7 @@
                 </div>
                 <div class="flex justify-end space-x-4 mt-6">
                     <button type="button" onclick="closeUserModal()" class="btn btn-secondary">Abbrechen</button>
-                    <button type="submit" class="btn btn-blue">Speichern</button>
+                    <button type="submit" class="btn btn-primary">Speichern</button>
                 </div>
             </form>
         </div>
@@ -1731,15 +1731,12 @@
                     <label class="block text-sm font-medium mb-2">Automatisches Logout nach (Minuten)</label>
                     <input type="number" id="settings-timeout" class="form-input" min="1">
                 </div>
-                <div class="flex justify-between items-center pt-4">
-                        <input type="number" id="settings-timeout" class="form-input" min="1">
-                    </div>
-                </div>
+                <!-- Removed duplicated timeout input and stray container -->
                 <div class="flex justify-between items-center mt-6">
                     <button type="button" onclick="logoutUser()" class="btn btn-secondary">Abmelden</button>
                     <div class="flex space-x-4">
                         <button type="button" onclick="closeSettingsModal()" class="btn btn-secondary">Abbrechen</button>
-                        <button type="submit" class="btn btn-blue">Speichern</button>
+                        <button type="submit" class="btn btn-primary">Speichern</button>
                     </div>
                 </div>
             </form>
