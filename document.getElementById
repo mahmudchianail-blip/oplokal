@@ -471,15 +471,15 @@
                     </div>
                 </div>
                 <div class="flex items-center space-x-2">
-                    <button class="btn btn-red" onclick="openBookingModal('ausgabe')" data-admin-only>
+                    <button class="btn btn-red" onclick="openBookingModal('ausgabe')">
                         <i data-lucide="minus-circle" class="h-4 w-4"></i>
                         Ausgabe buchen
                     </button>
-                    <button class="btn btn-green" onclick="openBookingModal('einnahme')" data-admin-only>
+                    <button class="btn btn-green" onclick="openBookingModal('einnahme')">
                         <i data-lucide="plus-circle" class="h-4 w-4"></i>
                         Einnahme buchen
                     </button>
-                    <button class="btn btn-blue" onclick="openUserModal()" data-admin-only>
+                    <button class="btn btn-blue" onclick="openUserModal()">
                         <i data-lucide="user-plus" class="h-4 w-4"></i>
                         Nutzer anlegen
                     </button>
@@ -3723,9 +3723,13 @@
 
         async function handlePasswordChange(e) {
             e.preventDefault();
-            const newPass = document.getElementById('settings-password').value;
-            if (!app || !app.currentUser) return;
+            const newPass = document.getElementById('settings-password').value.trim();
+            if (!app || !app.currentUser || !newPass) {
+                showNotification('Ungültiges Passwort', 'error');
+                return;
+            }
             app.currentUser.password = newPass;
+            document.getElementById('settings-form').reset();
             try {
                 await app.db.put('users', app.currentUser);
                 closeSettingsModal();
