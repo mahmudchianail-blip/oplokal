@@ -783,7 +783,7 @@
             <div class="card p-6">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-xl font-semibold">Lager & Waren</h2>
-                    <button class="btn btn-secondary" onclick="openProductModal()" id="btn-neues-produkt" data-admin-only>
+                    <button class="btn btn-secondary" onclick="openProductModal()" id="btn-neues-produkt">
                         <i data-lucide="plus" class="h-4 w-4"></i>
                         Neues Produkt
                     </button>
