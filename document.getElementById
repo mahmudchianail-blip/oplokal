@@ -1741,7 +1741,7 @@
                 </div>
                 <!-- Removed duplicated timeout input and stray container -->
                 <div class="flex justify-between items-center mt-6">
-                    <button type="button" onclick="logoutUser()" class="btn btn-secondary">Abmelden</button>
+                    <button type="button" onclick="logoutUser()" class="btn btn-danger">Abmelden</button>
                     <div class="flex space-x-4">
                         <button type="button" onclick="closeSettingsModal()" class="btn btn-secondary">Abbrechen</button>
                         <button type="submit" class="btn btn-primary">Speichern</button>
