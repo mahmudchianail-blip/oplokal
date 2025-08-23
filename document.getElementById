@@ -7421,7 +7421,49 @@ Optispar Buchhaltungssystem
                 showNotification('❌ Fehler beim Laden', 'error');
             }
         }
+        function createBuchungenSheetData(buchungen) {
+            const data = [['Datum', 'Beschreibung', 'Typ', 'Kategorie', 'Konto', 'Netto (€)', 'MwSt (€)', 'Brutto (€)']];
+            buchungen.forEach(b => {
+                const date = new Date(b.date || b.datum).toLocaleDateString('de-DE');
+                const amount = parseFloat(b.amount || b.betrag || (b.betrag_brutto_cent || 0) / 100) || 0;
+                const net = (amount * 0.84).toFixed(2);
+                const vat = (amount * 0.16).toFixed(2);
+                data.push([
+                    date,
+                    b.description || b.beschreibung || '',
+                    (b.type || b.typ) === 'einnahme' ? 'Einnahme' : 'Ausgabe',
+                    b.category || b.kategorie || '',
+                    b.account || b.konto || '',
+                    net,
+                    vat,
+                    amount.toFixed(2)
+                ]);
+            });
+            return data;
+        }
 
+        function createProductsSheetData(products) {
+            const data = [['Produktname', 'SKU', 'Kategorie', 'Lieferant', 'Netto (€)', 'Brutto (€)', 'Bestand', 'Min. Bestand', 'Lagerwert (€)']];
+            products.forEach(p => {
+                const priceNet = parseFloat(p.price || (p.preis_netto_cent || 0) / 100) || 0;
+                const priceGross = parseFloat(p.priceGross || (p.preis_brutto_cent || 0) / 100) || (priceNet * 1.19);
+                const stock = parseInt(p.bestand || 0);
+                const minStock = parseInt(p.minStock || p.mindestbestand || 0);
+                const value = (stock * priceNet).toFixed(2);
+                data.push([
+                    p.name,
+                    p.sku || '',
+                    p.category || p.kategorie || '',
+                    p.supplier || '',
+                    priceNet.toFixed(2),
+                    priceGross.toFixed(2),
+                    stock,
+                    minStock,
+                    value
+                ]);
+            });
+            return data;
+        }
 
 
         // Enhanced Excel export with folder structure
@@ -7458,21 +7500,31 @@ Optispar Buchhaltungssystem
                     CreatedDate: new Date()
                 };
                 
-                // Simple test sheet to verify functionality
-                const testData = [
-                    ['Optispar Buchhaltungsbericht'],
-                    ['Erstellt am:', new Date().toLocaleDateString('de-DE')],
-                    ['Berichtstyp:', reportType],
-                    [''],
-                    ['Buchungen:', filteredBuchungen.length],
-                    ['Produkte:', products.length],
-                    [''],
-                    ['Status:', 'Erfolgreich generiert']
+                // Sheet: Zusammenfassung & Analysen
+                const summaryData = createEnhancedSummarySheet(filteredBuchungen, products, reportType);
+                const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+                applySummaryStyling(wsSummary);
+                XLSX.utils.book_append_sheet(wb, wsSummary, "Zusammenfassung");
+
+                // Sheet: Buchungen (alle Transaktionen)
+                const buchungenSheetData = createBuchungenSheetData(filteredBuchungen);
+                const wsBuchungen = XLSX.utils.aoa_to_sheet(buchungenSheetData);
+                wsBuchungen['!cols'] = [
+                    { wch: 12 }, { wch: 30 }, { wch: 12 }, { wch: 15 },
+                    { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 12 }
                 ];
-                
-                const wsTest = XLSX.utils.aoa_to_sheet(testData);
-                XLSX.utils.book_append_sheet(wb, wsTest, "Bericht");
-                
+                wsBuchungen['!autofilter'] = { ref: `A1:H${buchungenSheetData.length}` };
+                XLSX.utils.book_append_sheet(wb, wsBuchungen, "Buchungen");
+
+                // Sheet: Produkte (Inventar)
+                const productsSheetData = createProductsSheetData(products);
+                const wsProducts = XLSX.utils.aoa_to_sheet(productsSheetData);
+                wsProducts['!cols'] = [
+                    { wch: 30 }, { wch: 15 }, { wch: 15 }, { wch: 20 },
+                    { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 15 }, { wch: 15 }
+                ];
+                wsProducts['!autofilter'] = { ref: `A1:I${productsSheetData.length}` };
+                XLSX.utils.book_append_sheet(wb, wsProducts, "Produkte");
                 // Generate filename with timestamp
                 const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
                 const filename = `Optispar_Bericht_${timestamp}.xlsx`;
