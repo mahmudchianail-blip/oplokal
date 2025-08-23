@@ -7464,6 +7464,26 @@ Optispar Buchhaltungssystem
             });
             return data;
         }
+        function createBewegungenSheetData(bewegungen) {
+            const data = [['Datum', 'Zeit', 'Produkt', 'Typ', 'Menge', 'Bestand alt', 'Bestand neu', 'Grund', 'Referenz', 'Lieferant', 'Kunde', 'Notiz']];
+            bewegungen.forEach(b => {
+                const date = new Date(b.timestamp).toLocaleDateString('de-DE');
+                const time = new Date(b.timestamp).toLocaleTimeString('de-DE');
+                const product = b.productName || b.produktName || 'Unbekanntes Produkt';
+                const type = b.type || b.typ || '';
+                const quantity = b.quantity ?? b.menge ?? '';
+                const oldStock = b.alterBestand ?? '';
+                const newStock = b.neuerBestand ?? '';
+                const reason = b.grund || (b.reason ? (app.getReasonText ? app.getReasonText(b.reason) : b.reason) : '');
+                const reference = b.reference || '';
+                const supplier = b.supplier || b.lieferant || '';
+                const customer = b.customer || b.kunde || '';
+                const notes = b.notes || b.notiz || '';
+                data.push([date, time, product, type, quantity, oldStock, newStock, reason, reference, supplier, customer, notes]);
+            });
+            return data;
+        }
+
 
 
         // Enhanced Excel export with folder structure
@@ -7478,12 +7498,12 @@ Optispar Buchhaltungssystem
                 // Get data
                 const buchungen = await app.db.getAll('buchungen');
                 const products = await app.db.getAll('waren');
-                
-                console.log('Data retrieved:', { buchungen: buchungen.length, products: products.length });
-                
+                 const bewegungen = await app.db.getAll('lagerbewegungen');
+
+                console.log('Data retrieved:', { buchungen: buchungen.length, products: products.length, bewegungen: bewegungen.length });
                 // Filter by date range
                 const filteredBuchungen = filterDataByDate(buchungen, fromDate, toDate);
-                
+                const filteredBewegungen = filterDataByDate(bewegungen, fromDate, toDate);
                 // Verify XLSX library is loaded
                 if (typeof XLSX === 'undefined') {
                     throw new Error('XLSX-Bibliothek nicht geladen');
