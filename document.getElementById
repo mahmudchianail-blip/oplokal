@@ -479,6 +479,14 @@
                         <i data-lucide="plus-circle" class="h-4 w-4"></i>
                         Einnahme buchen
                     </button>
+                    <button class="btn btn-blue" onclick="openUserModal()" data-admin-only>
+                        <i data-lucide="user-plus" class="h-4 w-4"></i>
+                        Nutzer anlegen
+                    </button>
+                    <button class="btn btn-secondary" onclick="openSettingsModal()">
+                        <i data-lucide="settings" class="h-4 w-4"></i>
+                        Einstellungen
+                    </button>
                 </div>
             </div>
         </div>
@@ -1658,6 +1666,77 @@
         </div>
     </div>
 
+    <!-- User Modal -->
+    <div id="user-modal" class="modal">
+        <div class="modal-content p-6" style="width: 100%; max-width: 500px;">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-semibold">Benutzer anlegen</h2>
+                <button onclick="closeUserModal()" class="text-gray-500" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            </div>
+            <form id="user-form">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Name *</label>
+                        <input type="text" id="user-name" class="form-input" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Geburtsdatum *</label>
+                        <input type="date" id="user-geburtsdatum" class="form-input" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Kürzel *</label>
+                        <input type="text" id="user-kuerzel" class="form-input" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Bereich *</label>
+                        <input type="text" id="user-bereich" class="form-input" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">E-Mail *</label>
+                        <input type="email" id="user-email" class="form-input" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Passwort *</label>
+                        <input type="password" id="user-password" class="form-input" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Rolle *</label>
+                        <select id="user-role" class="form-input">
+                            <option value="user">Nutzer</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-4 mt-6">
+                    <button type="button" onclick="closeUserModal()" class="btn btn-secondary">Abbrechen</button>
+                    <button type="submit" class="btn btn-blue">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content p-6" style="width: 100%; max-width: 400px;">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-semibold">Einstellungen</h2>
+                <button onclick="closeSettingsModal()" class="text-gray-500" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            </div>
+            <form id="settings-form">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Neues Passwort *</label>
+                        <input type="password" id="settings-password" class="form-input" required>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-4 mt-6">
+                    <button type="button" onclick="closeSettingsModal()" class="btn btn-secondary">Abbrechen</button>
+                    <button type="submit" class="btn btn-blue">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Konto Modal -->
     <div id="konto-modal" class="modal">
         <div class="modal-content">
@@ -2099,11 +2178,18 @@
         // Simple admin login using document.getElementById
         let isAdmin = false;
 
-        document.getElementById('loginBtn').addEventListener('click', () => {
+        document.getElementById('loginBtn').addEventListener('click', async () => {
             const email = document.getElementById('email').value;
             const pass = document.getElementById('password').value;
-            if (email === 'admin@example.com' && pass === 'admin123') {
-                isAdmin = true;
+            if (!app) {
+                alert('System noch nicht bereit');
+                return;
+            }
+            const users = await app.db.getAll('users');
+            const user = users.find(u => u.email === email && u.password === pass);
+            if (user) {
+                isAdmin = user.role === 'admin';
+                app.currentUser = user;
                 document.getElementById('loginModal').classList.add('hidden');
                 document.getElementById('app').classList.remove('hidden');
                 toggleAdminFeatures();
@@ -2156,14 +2242,14 @@
         class OptisparDB {
             constructor() {
                 this.db = null;
-                this.version = 1;
+                this.version = 4;
             }
 
             async init() {
                 console.log('Initializing OptisparApp with Bestellungen support...');
                 return new Promise((resolve, reject) => {
                     // Erhöhe Version für Bestellungen Support
-                    const request = indexedDB.open('OptisparStandalone', 3);
+                    const request = indexedDB.open('OptisparStandalone', 4);
                     
                     request.onerror = () => reject(request.error);
                     request.onsuccess = () => {
@@ -2201,13 +2287,31 @@
                             bestellungenStore.createIndex('haendler', 'haendler', { unique: false });
                         }
                         
+                        if (!db.objectStoreNames.contains('users')) {
+                            const userStore = db.createObjectStore('users', { keyPath: 'id' });
+                            userStore.createIndex('email', 'email', { unique: true });
+                        }
                         // Seed initial data
                         setTimeout(() => this.seedInitialData(), 100);
                     };
                 });
             }
-
+ 
             async seedInitialData() {
+               // Seed default admin user
+                const userCount = await this.count('users');
+                if (userCount === 0) {
+                    await this.add('users', {
+                        name: 'Admin',
+                        geburtsdatum: '1990-01-01',
+                        kuerzel: 'ADM',
+                        bereich: 'IT',
+                        email: 'admin@example.com',
+                        password: 'admin123',
+                        role: 'admin'
+                    });
+                }
+
                 // Check if data already exists
                 const kontenCount = await this.count('konten');
                 if (kontenCount > 0) return;
@@ -3575,6 +3679,61 @@
             }
             app.isEditingProduct = false;
             app.currentProduct = null;
+        }
+
+        function openUserModal() {
+            const modal = document.getElementById('user-modal');
+            document.getElementById('user-form').reset();
+            modal.classList.add('active');
+        }
+
+        function closeUserModal() {
+            document.getElementById('user-modal').classList.remove('active');
+        }
+
+        async function handleUserSubmit(e) {
+            e.preventDefault();
+            const user = {
+                name: document.getElementById('user-name').value,
+                geburtsdatum: document.getElementById('user-geburtsdatum').value,
+                kuerzel: document.getElementById('user-kuerzel').value,
+                bereich: document.getElementById('user-bereich').value,
+                email: document.getElementById('user-email').value,
+                password: document.getElementById('user-password').value,
+                role: document.getElementById('user-role').value
+            };
+            try {
+                await app.db.add('users', user);
+                closeUserModal();
+                showNotification('Benutzer gespeichert', 'success');
+            } catch (err) {
+                console.error('Error saving user', err);
+                showNotification('Fehler beim Speichern des Benutzers', 'error');
+            }
+        }
+
+        function openSettingsModal() {
+            document.getElementById('settings-form').reset();
+            document.getElementById('settings-modal').classList.add('active');
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settings-modal').classList.remove('active');
+        }
+
+        async function handlePasswordChange(e) {
+            e.preventDefault();
+            const newPass = document.getElementById('settings-password').value;
+            if (!app || !app.currentUser) return;
+            app.currentUser.password = newPass;
+            try {
+                await app.db.put('users', app.currentUser);
+                closeSettingsModal();
+                showNotification('Passwort aktualisiert', 'success');
+            } catch (err) {
+                console.error('Error updating password', err);
+                showNotification('Fehler beim Aktualisieren des Passworts', 'error');
+            }
         }
 
         function openDeleteModal(message, callback) {
@@ -7745,9 +7904,12 @@ Optispar Buchhaltungssystem
                 preventDoubleSubmit('wareneingang-form');
                 preventDoubleSubmit('warenausgang-form');
                 preventDoubleSubmit('stock-adjustment-form');
+                preventDoubleSubmit('user-form');
+                preventDoubleSubmit('settings-form');
                 document.getElementById('booking-form').addEventListener('submit', handleBookingSubmit);
                 document.getElementById('product-form').addEventListener('submit', handleProductSubmit);
-                
+                document.getElementById('user-form').addEventListener('submit', handleUserSubmit);
+                document.getElementById('settings-form').addEventListener('submit', handlePasswordChange);
                 // Modal close on outside click
                 document.querySelectorAll('.modal').forEach(modal => {
                     modal.addEventListener('click', (e) => {
