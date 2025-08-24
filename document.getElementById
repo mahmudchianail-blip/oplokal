@@ -1366,10 +1366,29 @@
                 <p class="text-blue-100 text-lg">Chats und Kalender</p>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
-                    <h2 class="text-xl font-semibold mb-4">💬 Chats</h2>
-                    <div id="user-menu-chats" class="space-y-2 max-h-96 overflow-y-auto text-gray-700">
-                        Keine Chats
+                <div class="bg-white rounded-xl shadow-lg border border-gray-100 min-h-[520px] flex flex-col">
+                    <div class="px-6 pt-6">
+                        <h2 class="text-xl font-semibold">💬 Chats</h2>
+                    </div>
+                    <div id="chat-module" class="flex flex-col lg:flex-row flex-1 overflow-hidden px-6 pb-6">
+                        <div id="chat-sidebar" class="w-full lg:w-[280px] lg:border-r border-b lg:border-b-0 border-gray-200 flex flex-col">
+                            <div class="p-4">
+                                <input id="chat-search" type="text" placeholder="Suchen: Name oder E-Mail" class="w-full p-2 border rounded mb-2">
+                                <button id="new-chat-btn" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded">+ Neue Nachricht</button>
+                            </div>
+                            <div id="conversation-list" class="flex-1 overflow-y-auto"></div>
+                            <div id="no-conversations" class="p-4 text-center text-gray-500">Noch keine Chats – ➕ Neue Nachricht</div>
+                        </div>
+                        <div id="chat-main" class="flex-1 flex flex-col">
+                            <div id="chat-header" class="p-4 border-b border-gray-200 hidden"></div>
+                            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-2"></div>
+                            <div id="chat-empty" class="flex-1 p-4 text-gray-500 hidden"></div>
+                            <form id="chat-input-form" class="p-4 border-t border-gray-200 flex items-end space-x-2 hidden">
+                                <textarea id="chat-input" placeholder="Nachricht schreiben …" class="flex-1 border rounded p-2 resize-none" rows="1"></textarea>
+                                <input type="file" id="chat-attachment" accept="image/*,.pdf" class="hidden">
+                                <button type="button" id="chat-attach-btn" title="Anhang" class="p-2">📎</button>
+                            </form>
+                        </div>
                     </div>
                 </div>
                 <div class="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
@@ -2229,7 +2248,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.14.04';
+        const APP_VERSION = '0.02.14.05';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -8223,8 +8242,226 @@ Optispar Buchhaltungssystem
                     loadingOverlay.classList.remove('active');
                 }
                 
-                showNotification('Fehler beim Initialisieren der Anwendung', 'error');
+        showNotification('Fehler beim Initialisieren der Anwendung', 'error');
+        }
+        });
+    </script>
+
+    <script>
+        // Basismodul für Chats
+        document.addEventListener('DOMContentLoaded', () => {
+            const SESSION_KEY = 'oplokal_session';
+            const currentUser = () => (window.app && window.app.currentUser) || (JSON.parse(localStorage.getItem(SESSION_KEY) || '{}').user);
+
+            const convKey = 'optispar_chat_conversations';
+            let conversations = JSON.parse(localStorage.getItem(convKey) || '[]');
+            const messages = {};
+            conversations.forEach(c => {
+                messages[c.id] = JSON.parse(localStorage.getItem(`optispar_chat_${c.id}`) || '[]');
+            });
+
+            const convListEl = document.getElementById('conversation-list');
+            const noConvEl = document.getElementById('no-conversations');
+            const chatHeader = document.getElementById('chat-header');
+            const chatMessages = document.getElementById('chat-messages');
+            const chatEmpty = document.getElementById('chat-empty');
+            const formEl = document.getElementById('chat-input-form');
+            const inputEl = document.getElementById('chat-input');
+            const attachInput = document.getElementById('chat-attachment');
+            const attachBtn = document.getElementById('chat-attach-btn');
+            const searchEl = document.getElementById('chat-search');
+
+            let activeConv = null;
+            let users = [];
+
+            function saveConversations() {
+                localStorage.setItem(convKey, JSON.stringify(conversations));
             }
+            function saveMessages(id) {
+                localStorage.setItem(`optispar_chat_${id}`, JSON.stringify(messages[id] || []));
+            }
+
+            function renderConversations() {
+                convListEl.innerHTML = '';
+                if (!conversations.length) {
+                    noConvEl.classList.remove('hidden');
+                    return;
+                }
+                noConvEl.classList.add('hidden');
+                conversations.forEach(conv => {
+                    const other = conv.participants.find(p => p !== currentUser()?.id);
+                    const name = conv.otherName || other || 'Unbekannt';
+                    const item = document.createElement('div');
+                    item.className = 'p-3 hover:bg-gray-100 cursor-pointer flex justify-between';
+                    item.dataset.name = name.toLowerCase();
+                    item.innerHTML = `<span>${name}</span>` + (conv.unread ? `<span class="ml-2 bg-blue-500 text-white text-xs rounded-full px-2">${conv.unread}</span>` : '');
+                    item.addEventListener('click', () => openConversation(conv.id));
+                    convListEl.appendChild(item);
+                });
+            }
+
+            function renderMessages() {
+                const msgs = messages[activeConv.id] || [];
+                chatMessages.innerHTML = '';
+                if (!msgs.length) {
+                    chatEmpty.textContent = `Schreib eine erste Nachricht an ${activeConv.otherName || ''} …`;
+                    chatEmpty.classList.remove('hidden');
+                } else {
+                    chatEmpty.classList.add('hidden');
+                }
+                msgs.forEach(msg => {
+                    const wrap = document.createElement('div');
+                    const own = msg.author_id === currentUser().id;
+                    wrap.className = 'flex ' + (own ? 'justify-end' : 'justify-start') + ' group';
+                    const bubble = document.createElement('div');
+                    bubble.className = `px-3 py-2 rounded-lg max-w-xs ${own ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-900'}`;
+                    if (msg.type === 'attachment') {
+                        if (msg.content.startsWith('data:image')) {
+                            const img = document.createElement('img');
+                            img.src = msg.content;
+                            img.className = 'max-w-xs rounded';
+                            bubble.appendChild(img);
+                        } else {
+                            const link = document.createElement('a');
+                            link.href = msg.content;
+                            link.textContent = 'Anhang';
+                            link.target = '_blank';
+                            bubble.appendChild(link);
+                        }
+                    } else {
+                        bubble.textContent = msg.content;
+                    }
+                    const meta = document.createElement('div');
+                    meta.className = 'text-xs mt-1 text-right';
+                    meta.textContent = msg.status || 'sent';
+                    bubble.appendChild(meta);
+                    wrap.appendChild(bubble);
+                    if (own) {
+                        const actions = document.createElement('div');
+                        actions.className = 'hidden group-hover:flex items-center space-x-1 ml-2 text-xs';
+                        const edit = document.createElement('button');
+                        edit.textContent = '✏️';
+                        edit.addEventListener('click', () => {
+                            const txt = prompt('Nachricht bearbeiten', msg.content);
+                            if (txt !== null) {
+                                msg.content = txt;
+                                msg.edited_at = new Date().toISOString();
+                                saveMessages(activeConv.id);
+                                renderMessages();
+                            }
+                        });
+                        const del = document.createElement('button');
+                        del.textContent = '🗑️';
+                        del.addEventListener('click', () => {
+                            const arr = messages[activeConv.id];
+                            const idx = arr.findIndex(m => m.id === msg.id);
+                            if (idx > -1) {
+                                arr.splice(idx, 1);
+                                saveMessages(activeConv.id);
+                                renderMessages();
+                            }
+                        });
+                        const star = document.createElement('button');
+                        star.textContent = msg.important ? '⭐' : '☆';
+                        star.addEventListener('click', () => {
+                            msg.important = !msg.important;
+                            star.textContent = msg.important ? '⭐' : '☆';
+                            saveMessages(activeConv.id);
+                        });
+                        actions.append(edit, del, star);
+                        wrap.appendChild(actions);
+                    }
+                    chatMessages.appendChild(wrap);
+                });
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            function openConversation(id) {
+                activeConv = conversations.find(c => c.id === id);
+                if (!activeConv) return;
+                activeConv.unread = 0;
+                saveConversations();
+                const other = activeConv.otherName || '';
+                chatHeader.classList.remove('hidden');
+                chatHeader.innerHTML = `<div><div class="font-semibold">${other}</div><div class="text-sm text-gray-500">${activeConv.otherRole || ''}</div></div>`;
+                formEl.classList.remove('hidden');
+                renderConversations();
+                renderMessages();
+            }
+
+            formEl.addEventListener('submit', e => {
+                e.preventDefault();
+                const text = inputEl.value.trim();
+                if (!text && !attachInput.files[0]) return;
+                const convId = activeConv.id;
+                messages[convId] = messages[convId] || [];
+                const msg = { id: Date.now(), author_id: currentUser().id, content: text, type: 'text', created_at: new Date().toISOString(), edited_at: null, important: false, status: 'sent' };
+                function finalize() {
+                    messages[convId].push(msg);
+                    saveMessages(convId);
+                    activeConv.last_message_at = msg.created_at;
+                    saveConversations();
+                    inputEl.value = '';
+                    attachInput.value = '';
+                    renderMessages();
+                    setTimeout(() => { msg.status = 'delivered'; saveMessages(convId); renderMessages(); }, 500);
+                    setTimeout(() => { msg.status = 'read'; saveMessages(convId); renderMessages(); }, 1000);
+                }
+                if (attachInput.files[0]) {
+                    const reader = new FileReader();
+                    reader.onload = e2 => {
+                        msg.type = 'attachment';
+                        msg.content = e2.target.result;
+                        finalize();
+                    };
+                    reader.readAsDataURL(attachInput.files[0]);
+                } else {
+                    finalize();
+                }
+            });
+
+            inputEl.addEventListener('keydown', e => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    formEl.dispatchEvent(new Event('submit'));
+                }
+            });
+
+            attachBtn.addEventListener('click', () => attachInput.click());
+
+            searchEl.addEventListener('input', () => {
+                const term = searchEl.value.toLowerCase();
+                Array.from(convListEl.children).forEach(item => {
+                    item.classList.toggle('hidden', !item.dataset.name.includes(term));
+                });
+            });
+
+            async function loadUsers() {
+                try {
+                    const res = await fetch('C:/Optispar/userdata/nutzer.json');
+                    return await res.json();
+                } catch (e) {
+                    console.warn('nutzer.json nicht gefunden');
+                    return [];
+                }
+            }
+
+            document.getElementById('new-chat-btn').addEventListener('click', async () => {
+                if (!users.length) users = await loadUsers();
+                const name = prompt('Empfänger wählen: ' + users.map(u => u.name).join(', '));
+                const u = users.find(us => us.name === name);
+                if (!u) return;
+                let conv = conversations.find(c => c.participants.includes(u.id));
+                if (!conv) {
+                    conv = { id: 'c' + Date.now(), participants: [currentUser().id, u.id], last_message_at: null, unread: 0, otherName: u.name, otherRole: u.rolle };
+                    conversations.push(conv);
+                    saveConversations();
+                }
+                messages[conv.id] = messages[conv.id] || [];
+                openConversation(conv.id);
+            });
+
+            renderConversations();
         });
     </script>
 
