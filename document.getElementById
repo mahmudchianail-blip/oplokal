@@ -480,11 +480,11 @@
                         <i data-lucide="plus-circle" class="h-4 w-4"></i>
                         Einnahme buchen
                     </button>
-                    <button class="btn btn-blue" onclick="openUserModal()" data-admin-only>
+                    <button id="open-user-btn" class="btn btn-blue" data-admin-only>
                         <i data-lucide="user-plus" class="h-4 w-4"></i>
                         Nutzer anlegen
                     </button>
-                    <button class="btn btn-secondary" onclick="openSettingsModal()">
+                    <button id="open-settings-btn" class="btn btn-secondary">
                         <i data-lucide="settings" class="h-4 w-4"></i>
                         Einstellungen
                     </button>
@@ -8191,6 +8191,8 @@ Optispar Buchhaltungssystem
                 document.getElementById('product-form').addEventListener('submit', handleProductSubmit);
                 document.getElementById('user-form').addEventListener('submit', handleUserSubmit);
                 document.getElementById('settings-form').addEventListener('submit', handleSettingsChange);
+                document.getElementById('open-user-btn')?.addEventListener('click', openUserModal);
+                document.getElementById('open-settings-btn')?.addEventListener('click', openSettingsModal);
                 // Modal close on outside click
                 document.querySelectorAll('.modal').forEach(modal => {
                     modal.addEventListener('click', (e) => {
