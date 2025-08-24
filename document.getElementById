@@ -10,7 +10,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -480,11 +479,11 @@
                         <i data-lucide="plus-circle" class="h-4 w-4"></i>
                         Einnahme buchen
                     </button>
-                    <button id="open-user-btn" type="button" class="btn btn-blue" data-admin-only>
+                    <button class="btn btn-blue" onclick="openUserModal()" data-admin-only>
                         <i data-lucide="user-plus" class="h-4 w-4"></i>
                         Nutzer anlegen
                     </button>
-                    <button id="open-settings-btn" type="button" class="btn btn-secondary">
+                    <button class="btn btn-secondary" onclick="openSettingsModal()">
                         <i data-lucide="settings" class="h-4 w-4"></i>
                         Einstellungen
                     </button>
@@ -1532,10 +1531,6 @@
                                    placeholder="Wird berechnet...">
                         </div>
                     </div>
-                    <div class="mt-4">
-                        <label class="block text-sm font-medium mb-2">Rechnung (PDF)</label>
-                        <input type="file" id="booking-pdf" class="form-input" accept="application/pdf">
-      
                 </div>
 
                 <!-- Account & Category -->
@@ -2199,7 +2194,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.13.15';
+        const APP_VERSION = '0.02.13.7';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -2273,10 +2268,9 @@
             }
         }, 60000);
 
-        const loginBtn = document.getElementById('loginBtn');
-        loginBtn?.addEventListener('click', async () => {
-            const email = document.getElementById('email')?.value || '';
-            const pass = document.getElementById('password')?.value || '';
+        document.getElementById('loginBtn').addEventListener('click', async () => {
+            const email = document.getElementById('email').value;
+            const pass = document.getElementById('password').value;
             if (!app) {
                 alert('System noch nicht bereit');
                 return;
@@ -2305,6 +2299,10 @@
                 }
             });
         }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            toggleAdminFeatures();
+        });
 
         // =====================================
         // === Utility: prevent double form submission ===
@@ -2815,7 +2813,6 @@
                     const typeText = buchung.typ === 'einnahme' ? 'Einnahme' : 'Ausgabe';
                     const typeIcon = buchung.typ === 'einnahme' ? 'plus-circle' : 'minus-circle';
                     const typeColor = buchung.typ === 'einnahme' ? 'text-green-600' : 'text-red-600';
-                    const pdfIcon = buchung.pdf ? `<button onclick="viewBuchungPdf('${buchung.id}')" class="ml-2 text-gray-500 hover:text-gray-700" title="PDF ansehen"><i data-lucide="paperclip" class="h-3 w-3"></i></button>` : '';
                     
                     // Get account name
                     const accountName = this.getAccountName(buchung.account);
@@ -2826,7 +2823,7 @@
                                 <div class="flex-1">
                                     <div class="flex items-center gap-2 mb-2">
                                         <i data-lucide="${typeIcon}" class="h-4 w-4 ${typeColor}"></i>
-                                        <h4 class="font-semibold text-gray-900">${buchung.beschreibung}</h4>${pdfIcon}
+                                        <h4 class="font-semibold text-gray-900">${buchung.beschreibung}</h4>
                                         <span class="px-2 py-1 text-xs rounded-full bg-${buchung.typ === 'einnahme' ? 'green' : 'red'}-100 text-${buchung.typ === 'einnahme' ? 'green' : 'red'}-800">
                                             ${typeText}
                                         </span>
@@ -2880,9 +2877,6 @@
                 });
 
                 container.innerHTML = html;
-                if (typeof lucide !== 'undefined' && lucide.createIcons) {
-                    lucide.createIcons();
-                }
                 
                 // Update count
                 const countElement = document.getElementById('buchungen-count');
@@ -3523,10 +3517,7 @@
         // =====================================
         // MODAL FUNCTIONS
         // =====================================
-        // Ensure only one modal is visible at a time
-        function closeAllModals() {
-            document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
-        }
+
         // Buchungskonten dynamisch laden
         async function loadBookingAccounts() {
             try {
@@ -3639,7 +3630,6 @@
             }
             
             try {
-                closeAllModals();
                 app.currentBookingType = type;
                 const modal = document.getElementById('booking-modal');
                 const title = document.getElementById('modal-title');
@@ -3648,14 +3638,15 @@
                 
                 console.log(`Opening booking modal for type: ${type}`);
             
-
-            // Prepare modal icon container and ensure only one icon exists
-            const modalIcon = document.getElementById('modal-icon');
-            let icon = null;
-            if (modalIcon) {
-                modalIcon.innerHTML = '';
-                icon = document.createElement('i');
-                modalIcon.appendChild(icon);
+            // Find or create icon element
+            let icon = document.querySelector('#modal-icon i');
+            if (!icon) {
+                // Create icon element if it doesn't exist
+                const modalIcon = document.getElementById('modal-icon');
+                if (modalIcon) {
+                    icon = document.createElement('i');
+                    modalIcon.appendChild(icon);
+                }
             }
             
             // Reset form
@@ -3673,7 +3664,7 @@
                     icon.setAttribute('data-lucide', 'trending-up');
                     icon.className = 'h-6 w-6 text-green-600';
                 }
-                if (modalIcon) modalIcon.className = 'p-2 rounded-full bg-green-100';
+                document.getElementById('modal-icon').className = 'p-2 rounded-full bg-green-100';
                 submitBtn.className = 'btn btn-green';
                 submitBtn.innerHTML = '<i data-lucide="save" class="h-4 w-4"></i> Einnahme speichern';
             } else {
@@ -3683,7 +3674,7 @@
                     icon.setAttribute('data-lucide', 'trending-down');
                     icon.className = 'h-6 w-6 text-red-600';
                 }
-                if (modalIcon) modalIcon.className = 'p-2 rounded-full bg-red-100';
+                document.getElementById('modal-icon').className = 'p-2 rounded-full bg-red-100';
                 submitBtn.className = 'btn btn-red';
                 submitBtn.innerHTML = '<i data-lucide="save" class="h-4 w-4"></i> Ausgabe speichern';
             }
@@ -3786,20 +3777,12 @@
 
         function openUserModal() {
             if (!isAdmin) {
-                // Nutzer ist nicht angemeldet – Login-Dialog anzeigen
-                if (!app || !app.currentUser) {
-                    document.getElementById('loginModal').classList.remove('hidden');
-                    document.getElementById('app').classList.add('hidden');
-                    return;
-                }
                 showNotification('Keine Berechtigung', 'error');
                 return;
             }
-            closeAllModals();
             const modal = document.getElementById('user-modal');
-            const form = document.getElementById('user-form');
-            if (form) form.reset();
-            if (modal) modal.classList.add('active');
+            document.getElementById('user-form').reset();
+            modal.classList.add('active');
         }
 
         function closeUserModal() {
@@ -3832,23 +3815,11 @@
         }
 
         function openSettingsModal() {
-            // Vor dem Öffnen sicherstellen, dass ein Benutzer angemeldet ist
-            if (!app || !app.currentUser) {
-                document.getElementById('loginModal').classList.remove('hidden');
-                document.getElementById('app').classList.add('hidden');
-                return;
-            }
-            closeAllModals();
-            const oldPw = document.getElementById('settings-old-password');
-            const newPw = document.getElementById('settings-password');
-            const confirmPw = document.getElementById('settings-confirm-password');
-            const timeoutInput = document.getElementById('settings-timeout');
-            if (oldPw) oldPw.value = '';
-            if (newPw) newPw.value = '';
-            if (confirmPw) confirmPw.value = '';
-            if (timeoutInput) timeoutInput.value = autoLogoutMinutes;
-            const modal = document.getElementById('settings-modal');
-            if (modal) modal.classList.add('active');
+            document.getElementById('settings-old-password').value = '';
+            document.getElementById('settings-password').value = '';
+            document.getElementById('settings-confirm-password').value = '';
+            document.getElementById('settings-timeout').value = autoLogoutMinutes;
+            document.getElementById('settings-modal').classList.add('active');
         }
 
         function closeSettingsModal() {
@@ -4071,39 +4042,7 @@
             }
         }
 
-        // PDF invoice handling
-        async function handleInvoiceUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            try {
-                const arrayBuffer = await file.arrayBuffer();
-                const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
-                let textContent = '';
-                for (let i = 1; i <= pdf.numPages; i++) {
-                    const page = await pdf.getPage(i);
-                    const content = await page.getTextContent();
-                    textContent += content.items.map(item => item.str).join(' ');
-                }
-                const nr = textContent.match(/Rechnungsnummer\s*[:#]?\s*(\S+)/i);
-                if (nr) document.getElementById('booking-rechnung-nummer').value = nr[1];
-                const amount = textContent.match(/(\d+[\.,]\d{2})\s?€?/);
-                if (amount) document.getElementById('booking-betrag').value = amount[1].replace(',', '.');
-                const date = textContent.match(/(\d{2}\.\d{2}\.\d{4})/);
-                if (date) document.getElementById('booking-datum').value = date[1].split('.').reverse().join('-');
-            } catch(err) {
-                console.error('PDF parse error', err);
-            }
-        }
-        function fileToBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            });
-        }
-
-    // Enhanced booking submission
+        // Enhanced booking submission
         async function handleBookingSubmit(event) {
             event.preventDefault();
             
@@ -4129,13 +4068,6 @@
                 }
                 
                 const nettoValue = parseFloat(document.getElementById('booking-netto').value || 0);
-
-                const pdfInput = document.getElementById('booking-pdf');
-                let pdfBase64 = null;
-                if (pdfInput && pdfInput.files.length) {
-                    pdfBase64 = await fileToBase64(pdfInput.files[0]);
-                }
-
                 const bruttoValue = parseFloat(document.getElementById('booking-betrag').value);
                 
                 console.log('Form values:', {
@@ -4161,8 +4093,7 @@
                     kategorie: document.getElementById('booking-kategorie').value,
                     notizen: document.getElementById('booking-notizen').value,
                     typ: bookingType,
-                    timestamp: new Date().toISOString(),
-                    pdf: pdfBase64
+                    timestamp: new Date().toISOString()
                 };
                 
                 // Validate required fields
@@ -4723,23 +4654,6 @@
                 showNotification('Fehler beim Laden der Buchung', 'error');
             }
         }
-        async function viewBuchungPdf(buchungId) {
-            try {
-                const buchung = await app.db.get('buchungen', buchungId);
-                if (buchung && buchung.pdf) {
-                    const pdfWindow = window.open('');
-                    if (pdfWindow) {
-                        pdfWindow.document.write(`<iframe src="${buchung.pdf}" frameborder="0" style="width:100%;height:100%"></iframe>`);
-                    }
-                } else {
-                    showNotification('Kein PDF für diese Buchung vorhanden', 'error');
-                }
-            } catch (error) {
-                console.error('Error opening PDF:', error);
-                showNotification('Fehler beim Öffnen der PDF', 'error');
-            }
-        }
-
 
         // Automatic calculation functions for Wareneingang
         function calculateWareneingangTotals() {
@@ -8154,7 +8068,6 @@ Optispar Buchhaltungssystem
                 app = new OptisparApp();
                 await app.init();
                 restoreSession();
-                toggleAdminFeatures();
                 document.getElementById('app-version').textContent = `Version ${APP_VERSION}`;
 
                 // Update report stats
@@ -8183,19 +8096,10 @@ Optispar Buchhaltungssystem
                 preventDoubleSubmit('stock-adjustment-form');
                 preventDoubleSubmit('user-form');
                 preventDoubleSubmit('settings-form');
-                document.getElementById('booking-form')?.addEventListener('submit', handleBookingSubmit);
-                document.getElementById('booking-pdf')?.addEventListener('change', handleInvoiceUpload);
-                document.getElementById('product-form')?.addEventListener('submit', handleProductSubmit);
-                document.getElementById('user-form')?.addEventListener('submit', handleUserSubmit);
-                document.getElementById('settings-form')?.addEventListener('submit', handleSettingsChange);
-                const openUserBtn = document.getElementById('open-user-btn');
-                if (openUserBtn) {
-                    openUserBtn.addEventListener('click', openUserModal);
-                }
-                const openSettingsBtn = document.getElementById('open-settings-btn');
-                if (openSettingsBtn) {
-                    openSettingsBtn.addEventListener('click', openSettingsModal);
-                }
+                document.getElementById('booking-form').addEventListener('submit', handleBookingSubmit);
+                document.getElementById('product-form').addEventListener('submit', handleProductSubmit);
+                document.getElementById('user-form').addEventListener('submit', handleUserSubmit);
+                document.getElementById('settings-form').addEventListener('submit', handleSettingsChange);
                 // Modal close on outside click
                 document.querySelectorAll('.modal').forEach(modal => {
                     modal.addEventListener('click', (e) => {
