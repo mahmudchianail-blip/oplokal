@@ -2200,7 +2200,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.13.16';
+        const APP_VERSION = '0.02.13.17';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -4150,6 +4150,9 @@
                 const belegInput = document.getElementById('booking-beleg');
                 if (belegInput.files && belegInput.files[0]) {
                     const file = belegInput.files[0];
+                    const invoiceNo = formData.rechnungsnummer ? formData.rechnungsnummer.trim() : 'Rechnung';
+                    const dateStr = formData.datum || new Date().toISOString().split('T')[0];
+                    const newFileName = `${invoiceNo}-${dateStr}.pdf`;
                     const base64 = await new Promise((resolve, reject) => {
                         const reader = new FileReader();
                         reader.onload = () => resolve(reader.result);
@@ -4157,7 +4160,7 @@
                         reader.readAsDataURL(file);
                     });
                     formData.beleg = {
-                        name: file.name,
+                        name: newFileName,
                         type: file.type,
                         data: base64
                     };
