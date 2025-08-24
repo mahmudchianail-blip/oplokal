@@ -488,24 +488,6 @@
                         <i data-lucide="settings" class="h-4 w-4"></i>
                         Einstellungen
                     </button>
-                    <div class="relative">
-                        <button id="user-menu-button" class="btn btn-secondary hidden">
-                            <i data-lucide="user" class="h-4 w-4"></i>
-                            <span id="user-menu-name">Nutzer</span>
-                        </button>
-                        <div id="user-menu-dropdown" class="hidden absolute right-0 mt-2 w-96 bg-white border rounded shadow-lg p-4 grid grid-cols-2 gap-4">
-                            <div>
-                                <h3 class="text-sm font-semibold mb-2">Chats</h3>
-                                <div id="user-menu-chats" class="space-y-2 max-h-48 overflow-y-auto text-sm text-gray-500">
-                                    Keine Chats
-                                </div>
-                            </div>
-                            <div>
-                                <h3 class="text-sm font-semibold mb-2">Kalender</h3>
-                                <div id="user-menu-calendar" class="text-sm text-gray-500">Kalender Platzhalter</div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -542,6 +524,10 @@
                 <button class="tab-button" onclick="switchTab('bestellungen')" id="tab-bestellungen">
                     <i data-lucide="shopping-cart" class="h-4 w-4"></i>
                     Bestellungen
+                </button>
+                <button class="tab-button" onclick="switchTab('admin')" id="tab-admin" data-admin-only>
+                    <i data-lucide="user" class="h-4 w-4"></i>
+                    Admin
                 </button>
             </div>
         </div>
@@ -1358,19 +1344,43 @@
                 </div>
 
                 <!-- Empty State -->
-                <div id="modern-empty-state" class="text-center py-16 hidden">
-                    <div class="bg-gray-50 rounded-2xl p-12 border-2 border-dashed border-gray-200">
-                        <i data-lucide="shopping-cart" class="h-16 w-16 text-gray-300 mx-auto mb-6"></i>
-                        <h3 class="text-xl font-semibold text-gray-700 mb-2">Noch keine Bestellungen</h3>
-                        <p class="text-gray-500 mb-6">Erstellen Sie Ihre erste Bestellung!</p>
-                        <button onclick="openModernBestellungModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors">
-                            <i data-lucide="plus" class="h-4 w-4 inline mr-2"></i>
-                            Erste Bestellung erstellen
-                        </button>
+        <div id="modern-empty-state" class="text-center py-16 hidden">
+            <div class="bg-gray-50 rounded-2xl p-12 border-2 border-dashed border-gray-200">
+                <i data-lucide="shopping-cart" class="h-16 w-16 text-gray-300 mx-auto mb-6"></i>
+                <h3 class="text-xl font-semibold text-gray-700 mb-2">Noch keine Bestellungen</h3>
+                <p class="text-gray-500 mb-6">Erstellen Sie Ihre erste Bestellung!</p>
+                <button onclick="openModernBestellungModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors">
+                    <i data-lucide="plus" class="h-4 w-4 inline mr-2"></i>
+                    Erste Bestellung erstellen
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <!-- Admin Tab -->
+    <div id="content-admin" class="tab-content" data-admin-only>
+        <div class="space-y-8">
+            <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-8 text-white">
+                <h1 class="text-4xl font-bold mb-2">🛠️ Admin</h1>
+                <p class="text-blue-100 text-lg">Chats und Kalender</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
+                    <h2 class="text-xl font-semibold mb-4">💬 Chats</h2>
+                    <div id="user-menu-chats" class="space-y-2 max-h-96 overflow-y-auto text-gray-700">
+                        Keine Chats
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
+                    <h2 class="text-xl font-semibold mb-4">📅 Kalender</h2>
+                    <div id="user-menu-calendar" class="text-gray-700">
+                        Kalender Platzhalter
                     </div>
                 </div>
             </div>
         </div>
+    </div>
 
     </main>
 
@@ -2219,7 +2229,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.14.03';
+        const APP_VERSION = '0.02.14.04';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -6311,8 +6321,7 @@
                 }
                 
                 // Verstecke alle anderen Tabs
-                const allContents = ['content-buchungen', 'content-bewegungen', 'content-konten', 'content-berichte', 'content-bestellungen'];
-                allContents.forEach(id => {
+                const allContents = ['content-buchungen', 'content-bewegungen', 'content-konten', 'content-berichte', 'content-bestellungen', 'content-admin'];                allContents.forEach(id => {
                     const element = document.getElementById(id);
                     if (element) {
                         element.style.display = 'none';
@@ -8156,16 +8165,20 @@ Optispar Buchhaltungssystem
                 document.getElementById('product-form').addEventListener('submit', handleProductSubmit);
                 document.getElementById('user-form').addEventListener('submit', handleUserSubmit);
                 document.getElementById('settings-form').addEventListener('submit', handleSettingsChange);
-                document.getElementById('user-menu-button').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    document.getElementById('user-menu-dropdown').classList.toggle('hidden');
-                });
-                document.getElementById('user-menu-dropdown').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                });
-                document.addEventListener('click', () => {
-                    document.getElementById('user-menu-dropdown').classList.add('hidden');
-                });
+                const userMenuButton = document.getElementById('user-menu-button');
+                const userMenuDropdown = document.getElementById('user-menu-dropdown');
+                if (userMenuButton && userMenuDropdown) {
+                    userMenuButton.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        userMenuDropdown.classList.toggle('hidden');
+                    });
+                    userMenuDropdown.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                    });
+                    document.addEventListener('click', () => {
+                        userMenuDropdown.classList.add('hidden');
+                    });
+                }
                 // Modal close on outside click
                 document.querySelectorAll('.modal').forEach(modal => {
                     modal.addEventListener('click', (e) => {
