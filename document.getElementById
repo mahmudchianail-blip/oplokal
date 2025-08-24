@@ -2200,7 +2200,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.13.15';
+        const APP_VERSION = '0.02.13.16';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -4685,8 +4685,22 @@
 
         function openBuchungBeleg(btn) {
             try {
-                const data = btn.getAttribute('data-beleg');
-                if (!data) return;
+                const dataUrl = btn.getAttribute('data-beleg');
+                if (!dataUrl) return;
+
+                const [header, base64] = dataUrl.split(',');
+                const mimeMatch = header.match(/:(.*?);/);
+                const mimeType = mimeMatch ? mimeMatch[1] : 'application/pdf';
+
+                const byteChars = atob(base64);
+                const byteNumbers = new Array(byteChars.length);
+                for (let i = 0; i < byteChars.length; i++) {
+                    byteNumbers[i] = byteChars.charCodeAt(i);
+                }
+                const blob = new Blob([new Uint8Array(byteNumbers)], { type: mimeType });
+                const url = URL.createObjectURL(blob);
+                window.open(url, '_blank');
+                URL.revokeObjectURL(url);
                 window.open(data, '_blank');
             } catch (error) {
                 console.error('Error opening attachment:', error);
