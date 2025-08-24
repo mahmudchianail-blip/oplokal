@@ -2306,10 +2306,6 @@
             });
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            toggleAdminFeatures();
-        });
-
         // =====================================
         // === Utility: prevent double form submission ===
         function preventDoubleSubmit(formId){    try {
@@ -8158,6 +8154,7 @@ Optispar Buchhaltungssystem
                 app = new OptisparApp();
                 await app.init();
                 restoreSession();
+                toggleAdminFeatures();
                 document.getElementById('app-version').textContent = `Version ${APP_VERSION}`;
 
                 // Update report stats
