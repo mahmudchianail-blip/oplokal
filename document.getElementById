@@ -1572,10 +1572,16 @@
                 <!-- Additional Notes -->
                 <div class="mb-6">
                     <label class="block text-sm font-medium mb-2">Zusätzliche Notizen</label>
-                    <textarea id="booking-notizen" class="form-input" rows="3" 
+                    <textarea id="booking-notizen" class="form-input" rows="3"
                               placeholder="Weitere Details zur Buchung..."></textarea>
                 </div>
                 
+                <!-- Attachment Upload -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium mb-2">Beleg (PDF)</label>
+                    <input type="file" id="booking-beleg" class="form-input" accept="application/pdf">
+                </div>
+
                 <!-- Invoice Number Validation -->
                 <div id="invoice-validation" class="hidden mb-4 p-3 rounded-lg">
                     <div class="flex items-center gap-2">
@@ -2194,7 +2200,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.13.7';
+        const APP_VERSION = '0.02.13.14';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -2848,6 +2854,11 @@
                                     <div class="text-2xl font-bold ${typeColor} mb-1">
                                         ${this.formatCurrency(buchung.betrag_brutto_cent)}
                                     </div>
+                                    ${buchung.beleg ? `
+                                    <button onclick="openBuchungBeleg(this)" data-beleg="${buchung.beleg.data}" class="btn btn-sm bg-gray-200 text-gray-700 hover:bg-gray-300 mt-2 mr-2" title="Beleg ansehen">
+                                        <i data-lucide="file-text" class="h-3 w-3"></i>
+                                    </button>
+                                    ` : ''}
                                     <button onclick="deleteBuchung('${buchung.id}')" class="btn btn-sm bg-red-600 text-white hover:bg-red-700 mt-2" title="Buchung löschen">
                                         <i data-lucide="trash-2" class="h-3 w-3"></i>
                                         Löschen
@@ -4135,6 +4146,23 @@
                     }
                 }
                 
+                // Handle attachment upload
+                const belegInput = document.getElementById('booking-beleg');
+                if (belegInput.files && belegInput.files[0]) {
+                    const file = belegInput.files[0];
+                    const base64 = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(reader.result);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(file);
+                    });
+                    formData.beleg = {
+                        name: file.name,
+                        type: file.type,
+                        data: base64
+                    };
+                }
+
                 console.log('Saving booking data:', formData);
                 
                 // Save booking
@@ -4652,6 +4680,18 @@
             } catch (error) {
                 console.error('Error loading booking for deletion:', error);
                 showNotification('Fehler beim Laden der Buchung', 'error');
+            }
+        }
+
+        function openBuchungBeleg(btn) {
+            try {
+                const data = btn.getAttribute('data-beleg');
+                if (!data) return;
+                const win = window.open('', '_blank');
+                win.document.write(`<iframe src="${data}" style="width:100%;height:100%;" frameborder="0"></iframe>`);
+            } catch (error) {
+                console.error('Error opening attachment:', error);
+                showNotification('Fehler beim Öffnen des Belegs', 'error');
             }
         }
 
