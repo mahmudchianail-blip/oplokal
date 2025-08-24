@@ -488,6 +488,24 @@
                         <i data-lucide="settings" class="h-4 w-4"></i>
                         Einstellungen
                     </button>
+                    <div class="relative">
+                        <button id="user-menu-button" class="btn btn-secondary hidden">
+                            <i data-lucide="user" class="h-4 w-4"></i>
+                            <span id="user-menu-name">Nutzer</span>
+                        </button>
+                        <div id="user-menu-dropdown" class="hidden absolute right-0 mt-2 w-96 bg-white border rounded shadow-lg p-4 grid grid-cols-2 gap-4">
+                            <div>
+                                <h3 class="text-sm font-semibold mb-2">Chats</h3>
+                                <div id="user-menu-chats" class="space-y-2 max-h-48 overflow-y-auto text-sm text-gray-500">
+                                    Keine Chats
+                                </div>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-semibold mb-2">Kalender</h3>
+                                <div id="user-menu-calendar" class="text-sm text-gray-500">Kalender Platzhalter</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2201,7 +2219,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.14.02';
+        const APP_VERSION = '0.02.14.03';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -2259,6 +2277,23 @@
             isAdmin = false;
             app.currentUser = null;
             toggleAdminFeatures();
+           updateUserMenu();
+        }
+
+        function updateUserMenu() {
+            const btn = document.getElementById('user-menu-button');
+            const nameEl = document.getElementById('user-menu-name');
+            const menu = document.getElementById('user-menu-dropdown');
+            if (btn && nameEl && menu) {
+                if (app && app.currentUser) {
+                    btn.classList.remove('hidden');
+                    nameEl.textContent = app.currentUser.name || 'Nutzer';
+                } else {
+                    btn.classList.add('hidden');
+                    nameEl.textContent = 'Nutzer';
+                    menu.classList.add('hidden');
+                }
+            }
         }
 
         ['click','mousemove','keydown','scroll'].forEach(evt => {
@@ -2293,6 +2328,7 @@
                 toggleAdminFeatures();
                 saveSession();
                 updateActivity();
+                updateUserMenu();
             } else {
                 alert('Ungültige Zugangsdaten');
             }
@@ -8087,6 +8123,7 @@ Optispar Buchhaltungssystem
                 app = new OptisparApp();
                 await app.init();
                 restoreSession();
+                updateUserMenu();
                 document.getElementById('app-version').textContent = `Version ${APP_VERSION}`;
 
                 // Update report stats
@@ -8119,6 +8156,16 @@ Optispar Buchhaltungssystem
                 document.getElementById('product-form').addEventListener('submit', handleProductSubmit);
                 document.getElementById('user-form').addEventListener('submit', handleUserSubmit);
                 document.getElementById('settings-form').addEventListener('submit', handleSettingsChange);
+                document.getElementById('user-menu-button').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    document.getElementById('user-menu-dropdown').classList.toggle('hidden');
+                });
+                document.getElementById('user-menu-dropdown').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                });
+                document.addEventListener('click', () => {
+                    document.getElementById('user-menu-dropdown').classList.add('hidden');
+                });
                 // Modal close on outside click
                 document.querySelectorAll('.modal').forEach(modal => {
                     modal.addEventListener('click', (e) => {
