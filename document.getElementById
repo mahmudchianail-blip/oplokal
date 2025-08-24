@@ -2201,7 +2201,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.14.0';
+        const APP_VERSION = '0.02.14.02';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -7796,8 +7796,18 @@ Optispar Buchhaltungssystem
             }
         }
         function createBuchungenSheetData(buchungen) {
-            const data = [['Datum', 'Beschreibung', 'Typ', 'Kategorie', 'Konto', 'Netto (€)', 'MwSt (€)', 'Brutto (€)']];
-            buchungen.forEach(b => {
+            const data = [[
+                'Datum',
+                'Beschreibung',
+                'Typ',
+                'Kategorie',
+                'Konto',
+                'Rechnungsnummer',
+                'Name/Firma',
+                'Netto (€)',
+                'MwSt (€)',
+                'Brutto (€)'
+            ]];            buchungen.forEach(b => {
                 const date = new Date(b.date || b.datum).toLocaleDateString('de-DE');
                 const amount = parseFloat(b.amount || b.betrag || (b.betrag_brutto_cent || 0) / 100) || 0;
                 const net = (amount * 0.84).toFixed(2);
@@ -7808,6 +7818,8 @@ Optispar Buchhaltungssystem
                     (b.type || b.typ) === 'einnahme' ? 'Einnahme' : 'Ausgabe',
                     b.category || b.kategorie || '',
                     b.account || b.konto || '',
+                    b.rechnungsnummer || b.invoiceNumber || '',
+                    b.kundeName || b.kunde || b.customer || '',
                     net,
                     vat,
                     amount.toFixed(2)
@@ -7939,9 +7951,10 @@ Optispar Buchhaltungssystem
                 const wsBuchungen = XLSX.utils.aoa_to_sheet(buchungenSheetData);
                 wsBuchungen['!cols'] = [
                     { wch: 12 }, { wch: 30 }, { wch: 12 }, { wch: 15 },
-                    { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 12 }
+                    { wch: 15 }, { wch: 20 }, { wch: 25 }, { wch: 12 },
+                    { wch: 12 }, { wch: 12 }
                 ];
-                wsBuchungen['!autofilter'] = { ref: `A1:H${buchungenSheetData.length}` };
+                wsBuchungen['!autofilter'] = { ref: `A1:J${buchungenSheetData.length}` };
                 XLSX.utils.book_append_sheet(wb, wsBuchungen, "Buchungen");
 
                 // Sheet: Produkte (Inventar)
