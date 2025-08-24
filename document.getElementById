@@ -10,6 +10,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -1531,6 +1532,10 @@
                                    placeholder="Wird berechnet...">
                         </div>
                     </div>
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium mb-2">Rechnung (PDF)</label>
+                        <input type="file" id="booking-pdf" class="form-input" accept="application/pdf">
+      
                 </div>
 
                 <!-- Account & Category -->
@@ -2194,7 +2199,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.13.7';
+        const APP_VERSION = '0.02.13.9';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -2813,6 +2818,7 @@
                     const typeText = buchung.typ === 'einnahme' ? 'Einnahme' : 'Ausgabe';
                     const typeIcon = buchung.typ === 'einnahme' ? 'plus-circle' : 'minus-circle';
                     const typeColor = buchung.typ === 'einnahme' ? 'text-green-600' : 'text-red-600';
+                    const pdfIcon = buchung.pdf ? '<i data-lucide="paperclip" class="h-3 w-3 text-gray-500 ml-2" title="PDF"></i>' : '';
                     
                     // Get account name
                     const accountName = this.getAccountName(buchung.account);
@@ -2823,7 +2829,7 @@
                                 <div class="flex-1">
                                     <div class="flex items-center gap-2 mb-2">
                                         <i data-lucide="${typeIcon}" class="h-4 w-4 ${typeColor}"></i>
-                                        <h4 class="font-semibold text-gray-900">${buchung.beschreibung}</h4>
+                                        <h4 class="font-semibold text-gray-900">${buchung.beschreibung}</h4>${pdfIcon}
                                         <span class="px-2 py-1 text-xs rounded-full bg-${buchung.typ === 'einnahme' ? 'green' : 'red'}-100 text-${buchung.typ === 'einnahme' ? 'green' : 'red'}-800">
                                             ${typeText}
                                         </span>
@@ -4042,7 +4048,39 @@
             }
         }
 
-        // Enhanced booking submission
+        // PDF invoice handling
+        async function handleInvoiceUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+                let textContent = '';
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const content = await page.getTextContent();
+                    textContent += content.items.map(item => item.str).join(' ');
+                }
+                const nr = textContent.match(/Rechnungsnummer\s*[:#]?\s*(\S+)/i);
+                if (nr) document.getElementById('booking-rechnung-nummer').value = nr[1];
+                const amount = textContent.match(/(\d+[\.,]\d{2})\s?€?/);
+                if (amount) document.getElementById('booking-betrag').value = amount[1].replace(',', '.');
+                const date = textContent.match(/(\d{2}\.\d{2}\.\d{4})/);
+                if (date) document.getElementById('booking-datum').value = date[1].split('.').reverse().join('-');
+            } catch(err) {
+                console.error('PDF parse error', err);
+            }
+        }
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+    // Enhanced booking submission
         async function handleBookingSubmit(event) {
             event.preventDefault();
             
@@ -4068,6 +4106,13 @@
                 }
                 
                 const nettoValue = parseFloat(document.getElementById('booking-netto').value || 0);
+
+                const pdfInput = document.getElementById('booking-pdf');
+                let pdfBase64 = null;
+                if (pdfInput && pdfInput.files.length) {
+                    pdfBase64 = await fileToBase64(pdfInput.files[0]);
+                }
+
                 const bruttoValue = parseFloat(document.getElementById('booking-betrag').value);
                 
                 console.log('Form values:', {
@@ -4093,7 +4138,8 @@
                     kategorie: document.getElementById('booking-kategorie').value,
                     notizen: document.getElementById('booking-notizen').value,
                     typ: bookingType,
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
+                    pdf: pdfBase64
                 };
                 
                 // Validate required fields
@@ -8097,6 +8143,7 @@ Optispar Buchhaltungssystem
                 preventDoubleSubmit('user-form');
                 preventDoubleSubmit('settings-form');
                 document.getElementById('booking-form').addEventListener('submit', handleBookingSubmit);
+                document.getElementById('booking-pdf').addEventListener('change', handleInvoiceUpload);
                 document.getElementById('product-form').addEventListener('submit', handleProductSubmit);
                 document.getElementById('user-form').addEventListener('submit', handleUserSubmit);
                 document.getElementById('settings-form').addEventListener('submit', handleSettingsChange);
