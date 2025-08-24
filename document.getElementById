@@ -2199,7 +2199,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.13.10';
+        const APP_VERSION = '0.02.13.11';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -3786,6 +3786,12 @@
 
         function openUserModal() {
             if (!isAdmin) {
+                // Nutzer ist nicht angemeldet – Login-Dialog anzeigen
+                if (!app || !app.currentUser) {
+                    document.getElementById('loginModal').classList.remove('hidden');
+                    document.getElementById('app').classList.add('hidden');
+                    return;
+                }
                 showNotification('Keine Berechtigung', 'error');
                 return;
             }
@@ -3824,6 +3830,12 @@
         }
 
         function openSettingsModal() {
+            // Vor dem Öffnen sicherstellen, dass ein Benutzer angemeldet ist
+            if (!app || !app.currentUser) {
+                document.getElementById('loginModal').classList.remove('hidden');
+                document.getElementById('app').classList.add('hidden');
+                return;
+            }
             document.getElementById('settings-old-password').value = '';
             document.getElementById('settings-password').value = '';
             document.getElementById('settings-confirm-password').value = '';
