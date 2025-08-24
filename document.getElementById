@@ -480,11 +480,11 @@
                         <i data-lucide="plus-circle" class="h-4 w-4"></i>
                         Einnahme buchen
                     </button>
-                    <button id="open-user-btn" class="btn btn-blue" data-admin-only>
+                    <button id="open-user-btn" type="button" class="btn btn-blue" data-admin-only>
                         <i data-lucide="user-plus" class="h-4 w-4"></i>
                         Nutzer anlegen
                     </button>
-                    <button id="open-settings-btn" class="btn btn-secondary">
+                    <button id="open-settings-btn" type="button" class="btn btn-secondary">
                         <i data-lucide="settings" class="h-4 w-4"></i>
                         Einstellungen
                     </button>
@@ -2199,7 +2199,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.13.13';
+        const APP_VERSION = '0.02.13.14';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -3651,15 +3651,14 @@
                 
                 console.log(`Opening booking modal for type: ${type}`);
             
-            // Find or create icon element
-            let icon = document.querySelector('#modal-icon i');
-            if (!icon) {
-                // Create icon element if it doesn't exist
-                const modalIcon = document.getElementById('modal-icon');
-                if (modalIcon) {
-                    icon = document.createElement('i');
-                    modalIcon.appendChild(icon);
-                }
+
+            // Prepare modal icon container and ensure only one icon exists
+            const modalIcon = document.getElementById('modal-icon');
+            let icon = null;
+            if (modalIcon) {
+                modalIcon.innerHTML = '';
+                icon = document.createElement('i');
+                modalIcon.appendChild(icon);
             }
             
             // Reset form
@@ -3677,7 +3676,7 @@
                     icon.setAttribute('data-lucide', 'trending-up');
                     icon.className = 'h-6 w-6 text-green-600';
                 }
-                document.getElementById('modal-icon').className = 'p-2 rounded-full bg-green-100';
+                if (modalIcon) modalIcon.className = 'p-2 rounded-full bg-green-100';
                 submitBtn.className = 'btn btn-green';
                 submitBtn.innerHTML = '<i data-lucide="save" class="h-4 w-4"></i> Einnahme speichern';
             } else {
@@ -3687,7 +3686,7 @@
                     icon.setAttribute('data-lucide', 'trending-down');
                     icon.className = 'h-6 w-6 text-red-600';
                 }
-                document.getElementById('modal-icon').className = 'p-2 rounded-full bg-red-100';
+                if (modalIcon) modalIcon.className = 'p-2 rounded-full bg-red-100';
                 submitBtn.className = 'btn btn-red';
                 submitBtn.innerHTML = '<i data-lucide="save" class="h-4 w-4"></i> Ausgabe speichern';
             }
