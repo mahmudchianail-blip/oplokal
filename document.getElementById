@@ -4689,11 +4689,7 @@
         function openBuchungBeleg(btn) {
             try {
                 const fileName = btn.getAttribute('data-beleg-name') || 'beleg.pdf';
-                const dataUrl = btn.getAttribute('data-beleg');
-                if (!dataUrl) {
-                    showNotification('Fehler beim Öffnen des Belegs', 'error');
-                    return;
-                }
+                if (!dataUrl) return;
 
                 const [header, base64] = dataUrl.split(',');
                 const mimeMatch = header.match(/:(.*?);/);
