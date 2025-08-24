@@ -2200,7 +2200,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.13.17';
+        const APP_VERSION = '0.02.13.18';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -2855,8 +2855,7 @@
                                         ${this.formatCurrency(buchung.betrag_brutto_cent)}
                                     </div>
                                     ${buchung.beleg ? `
-                                    <button onclick="openBuchungBeleg(this)" data-beleg="${buchung.beleg.data}" class="btn btn-sm bg-gray-200 text-gray-700 hover:bg-gray-300 mt-2 mr-2" title="Beleg ansehen">
-                                        <i data-lucide="file-text" class="h-3 w-3"></i>
+                                    <button onclick="openBuchungBeleg(this)" data-beleg="${buchung.beleg.data}" data-beleg-name="${buchung.beleg.name}" class="btn btn-sm bg-gray-200 text-gray-700 hover:bg-gray-300 mt-2 mr-2" title="Beleg ansehen">                                        <i data-lucide="file-text" class="h-3 w-3"></i>
                                     </button>
                                     ` : ''}
                                     <button onclick="deleteBuchung('${buchung.id}')" class="btn btn-sm bg-red-600 text-white hover:bg-red-700 mt-2" title="Buchung löschen">
@@ -4688,7 +4687,7 @@
 
         function openBuchungBeleg(btn) {
             try {
-                const dataUrl = btn.getAttribute('data-beleg');
+                const fileName = btn.getAttribute('data-beleg-name') || 'beleg.pdf';
                 if (!dataUrl) return;
 
                 const [header, base64] = dataUrl.split(',');
@@ -4702,9 +4701,14 @@
                 }
                 const blob = new Blob([new Uint8Array(byteNumbers)], { type: mimeType });
                 const url = URL.createObjectURL(blob);
-                window.open(url, '_blank');
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = fileName;
+                link.target = '_blank';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
                 URL.revokeObjectURL(url);
-                window.open(data, '_blank');
             } catch (error) {
                 console.error('Error opening attachment:', error);
                 showNotification('Fehler beim Öffnen des Belegs', 'error');
