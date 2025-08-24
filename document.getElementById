@@ -10,6 +10,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -2200,7 +2202,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.13.18';
+        const APP_VERSION = '0.02.13.19';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -7984,108 +7986,49 @@ Optispar Buchhaltungssystem
                 const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
                 const filename = `Optispar_Bericht_${timestamp}.xlsx`;
                 
-                console.log('Attempting download with filename:', filename);
-                
-                // Try multiple download methods
-                let downloadSuccess = false;
-                let lastError = null;
-                
-                // Method 1: Try XLSX.writeFile (works in most desktop browsers)
-                try {
-                    console.log('Method 1: Trying XLSX.writeFile...');
-                    XLSX.writeFile(wb, filename);
-                    downloadSuccess = true;
-                    console.log('✅ XLSX.writeFile succeeded');
-                } catch (writeFileError) {
-                    console.warn('⚠️ XLSX.writeFile failed:', writeFileError);
-                    lastError = writeFileError;
-                }
-                
-                // Method 2: Manual blob download (fallback)
-                if (!downloadSuccess) {
-                    try {
-                        console.log('Method 2: Trying manual blob download...');
-                        
-                        const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-                        console.log('Workbook written to array, size:', wbout.byteLength, 'bytes');
-                        
-                        if (wbout.byteLength === 0) {
-                            throw new Error('Generierte Excel-Datei ist leer');
+
+                // Build ZIP containing Excel and all booking PDFs
+                const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+                const zip = new JSZip();
+                zip.file(filename, wbout);
+
+                // Merge all booking PDF attachments into one document
+                const pdfDoc = await PDFLib.PDFDocument.create();
+                for (const b of filteredBuchungen) {
+                    if (b.beleg && b.beleg.data) {
+                        try {
+                            const pdfBytes = base64ToUint8Array(b.beleg.data.split(',')[1]);
+                            const pdf = await PDFLib.PDFDocument.load(pdfBytes);
+                            const pages = await pdfDoc.copyPages(pdf, pdf.getPageIndices());
+                            pages.forEach(p => pdfDoc.addPage(p));
+                        } catch (e) {
+                            console.warn('Fehler beim Zusammenführen eines Belegs:', e);
                         }
                         
-                        const blob = new Blob([wbout], { 
-                            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
-                        });
-                        console.log('Blob created, size:', blob.size, 'bytes');
-                        
-                        // Create and trigger download
-                        const downloadLink = document.createElement('a');
-                        const url = window.URL.createObjectURL(blob);
-                        
-                        downloadLink.href = url;
-                        downloadLink.download = filename;
-                        downloadLink.style.display = 'none';
-                        
-                        document.body.appendChild(downloadLink);
-                        downloadLink.click();
-                        document.body.removeChild(downloadLink);
-                        
-                        // Clean up
-                        setTimeout(() => {
-                            window.URL.revokeObjectURL(url);
-                            console.log('✅ Manual blob download completed and URL cleaned up');
-                        }, 1000);
-                        
-                        downloadSuccess = true;
-                        console.log('✅ Manual blob download succeeded');
-                        
-                    } catch (blobError) {
-                        console.error('❌ Manual blob download failed:', blobError);
-                        lastError = blobError;
+
                     }
                 }
                 
-                // Method 3: CSV fallback (universal compatibility)
-                if (!downloadSuccess) {
-                    console.log('Method 3: Trying CSV fallback...');
-                    
-                    try {
-                        const csvContent = convertToCSV(buchungen, products);
-                        const csvFilename = filename.replace('.xlsx', '.csv');
-                        
-                        const csvBlob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                        const csvLink = document.createElement('a');
-                        const csvUrl = URL.createObjectURL(csvBlob);
-                        
-                        csvLink.href = csvUrl;
-                        csvLink.download = csvFilename;
-                        csvLink.style.display = 'none';
-                        
-                        document.body.appendChild(csvLink);
-                        csvLink.click();
-                        document.body.removeChild(csvLink);
-                        
-                        setTimeout(() => URL.revokeObjectURL(csvUrl), 1000);
-                        
-                        showNotification('📄 CSV-Bericht erfolgreich heruntergeladen!', 'success');
-                        downloadSuccess = true;
-                        console.log('✅ CSV fallback download succeeded');
-                        
-                    } catch (csvError) {
-                        console.error('❌ CSV fallback failed:', csvError);
-                        lastError = csvError;
-                    }
+                if (pdfDoc.getPageCount() > 0) {
+                    const mergedPdf = await pdfDoc.save();
+                    zip.file('Buchungen_Belege.pdf', mergedPdf);
                 }
-                
-                if (downloadSuccess) {
-                    showNotification('✅ Bericht erfolgreich heruntergeladen!', 'success');
-                    setTimeout(() => {
-                        showNotification(`💡 Speichern Sie den Bericht in: ${savedPath}/Berichte/`, 'info');
-                    }, 2000);
-                } else {
-                    throw lastError || new Error('Alle Download-Methoden fehlgeschlagen');
-                }
-                
+
+                const zipBlob = await zip.generateAsync({ type: 'blob' });
+                const zipLink = document.createElement('a');
+                zipLink.href = URL.createObjectURL(zipBlob);
+                zipLink.download = filename.replace('.xlsx', '.zip');
+                zipLink.style.display = 'none';
+
+                document.body.appendChild(zipLink);
+                zipLink.click();
+                document.body.removeChild(zipLink);
+                setTimeout(() => URL.revokeObjectURL(zipLink.href), 1000);
+
+                showNotification('✅ ZIP-Bericht erfolgreich heruntergeladen!', 'success');
+                setTimeout(() => {
+                    showNotification(`💡 Speichern Sie den Bericht in: ${savedPath}/Berichte/`, 'info');
+                }, 2000);
             } catch (error) {
                 console.error('❌ Excel export error:', error);
                 showNotification(`Fehler beim Erstellen des Berichts: ${error.message}`, 'error');
@@ -8115,6 +8058,16 @@ Optispar Buchhaltungssystem
             });
             
             return csv;
+        }
+        // Helper to convert base64 string to Uint8Array
+        function base64ToUint8Array(base64) {
+            const binary = atob(base64);
+            const len = binary.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            return bytes;
         }
 
         // =====================================
