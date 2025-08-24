@@ -1374,6 +1374,7 @@
                         <div id="chat-sidebar" class="w-full lg:w-[280px] lg:border-r border-b lg:border-b-0 border-gray-200 flex flex-col">
                             <div class="p-4">
                                 <input id="chat-search" type="text" placeholder="Suchen: Name oder E-Mail" class="w-full p-2 border rounded mb-2">
+                                <div id="user-suggestions" class="border rounded mb-2 hidden max-h-40 overflow-y-auto bg-white shadow"></div>
                                 <button id="new-chat-btn" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded">+ Neue Nachricht</button>
                             </div>
                             <div id="conversation-list" class="flex-1 overflow-y-auto"></div>
@@ -2248,7 +2249,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.14.05';
+        const APP_VERSION = '0.02.14.06';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -8429,11 +8430,45 @@ Optispar Buchhaltungssystem
 
             attachBtn.addEventListener('click', () => attachInput.click());
 
-            searchEl.addEventListener('input', () => {
+            searchEl.addEventListener('input', async () => {
                 const term = searchEl.value.toLowerCase();
                 Array.from(convListEl.children).forEach(item => {
                     item.classList.toggle('hidden', !item.dataset.name.includes(term));
                 });
+                if (!users.length) users = await loadUsers();
+                const suggEl = document.getElementById('user-suggestions');
+                suggEl.innerHTML = '';
+                if (term) {
+                    const matches = users.filter(u =>
+                        (u.name && u.name.toLowerCase().includes(term)) ||
+                        (u.email && u.email.toLowerCase().includes(term))
+                    );
+                    if (matches.length) {
+                        suggEl.classList.remove('hidden');
+                        matches.forEach(u => {
+                            const item = document.createElement('div');
+                            item.className = 'p-2 hover:bg-gray-100 cursor-pointer';
+                            item.textContent = u.name;
+                            item.addEventListener('click', () => {
+                                let conv = conversations.find(c => c.participants.includes(u.id));
+                                if (!conv) {
+                                    conv = { id: 'c' + Date.now(), participants: [currentUser().id, u.id], last_message_at: null, unread: 0, otherName: u.name, otherRole: u.rolle };
+                                    conversations.push(conv);
+                                    saveConversations();
+                                }
+                                messages[conv.id] = messages[conv.id] || [];
+                                openConversation(conv.id);
+                                suggEl.classList.add('hidden');
+                                searchEl.value = '';
+                            });
+                            suggEl.appendChild(item);
+                        });
+                    } else {
+                        suggEl.classList.add('hidden');
+                    }
+                } else {
+                    suggEl.classList.add('hidden');
+                }
             });
 
             async function loadUsers() {
