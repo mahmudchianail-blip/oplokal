@@ -2199,7 +2199,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.13.11';
+        const APP_VERSION = '0.02.13.12';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -3526,7 +3526,10 @@
         // =====================================
         // MODAL FUNCTIONS
         // =====================================
-
+        // Ensure only one modal is visible at a time
+        function closeAllModals() {
+            document.querySelectorAll('.modal').forEach(m => m.classList.remove('active'));
+        }
         // Buchungskonten dynamisch laden
         async function loadBookingAccounts() {
             try {
@@ -3639,6 +3642,7 @@
             }
             
             try {
+                closeAllModals();
                 app.currentBookingType = type;
                 const modal = document.getElementById('booking-modal');
                 const title = document.getElementById('modal-title');
@@ -3795,6 +3799,7 @@
                 showNotification('Keine Berechtigung', 'error');
                 return;
             }
+            closeAllModals();
             const modal = document.getElementById('user-modal');
             document.getElementById('user-form').reset();
             modal.classList.add('active');
@@ -3836,6 +3841,7 @@
                 document.getElementById('app').classList.add('hidden');
                 return;
             }
+            closeAllModals();
             document.getElementById('settings-old-password').value = '';
             document.getElementById('settings-password').value = '';
             document.getElementById('settings-confirm-password').value = '';
