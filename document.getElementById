@@ -2199,7 +2199,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.13.12';
+        const APP_VERSION = '0.02.13.13';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -3801,8 +3801,9 @@
             }
             closeAllModals();
             const modal = document.getElementById('user-modal');
-            document.getElementById('user-form').reset();
-            modal.classList.add('active');
+            const form = document.getElementById('user-form');
+            if (form) form.reset();
+            if (modal) modal.classList.add('active');
         }
 
         function closeUserModal() {
@@ -3842,11 +3843,16 @@
                 return;
             }
             closeAllModals();
-            document.getElementById('settings-old-password').value = '';
-            document.getElementById('settings-password').value = '';
-            document.getElementById('settings-confirm-password').value = '';
-            document.getElementById('settings-timeout').value = autoLogoutMinutes;
-            document.getElementById('settings-modal').classList.add('active');
+            const oldPw = document.getElementById('settings-old-password');
+            const newPw = document.getElementById('settings-password');
+            const confirmPw = document.getElementById('settings-confirm-password');
+            const timeoutInput = document.getElementById('settings-timeout');
+            if (oldPw) oldPw.value = '';
+            if (newPw) newPw.value = '';
+            if (confirmPw) confirmPw.value = '';
+            if (timeoutInput) timeoutInput.value = autoLogoutMinutes;
+            const modal = document.getElementById('settings-modal');
+            if (modal) modal.classList.add('active');
         }
 
         function closeSettingsModal() {
