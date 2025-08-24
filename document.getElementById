@@ -11,7 +11,6 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
     
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -2202,7 +2201,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.13.19';
+        const APP_VERSION = '0.02.14.0';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -7992,26 +7991,19 @@ Optispar Buchhaltungssystem
                 const zip = new JSZip();
                 zip.file(filename, wbout);
 
-                // Merge all booking PDF attachments into one document
-                const pdfDoc = await PDFLib.PDFDocument.create();
+                // Add each booking PDF attachment as separate file in the ZIP
+                const belegeFolder = zip.folder('Belege');
                 for (const b of filteredBuchungen) {
                     if (b.beleg && b.beleg.data) {
                         try {
                             const pdfBytes = base64ToUint8Array(b.beleg.data.split(',')[1]);
-                            const pdf = await PDFLib.PDFDocument.load(pdfBytes);
-                            const pages = await pdfDoc.copyPages(pdf, pdf.getPageIndices());
-                            pages.forEach(p => pdfDoc.addPage(p));
+                            const pdfName = b.beleg.name || 'Beleg.pdf';
+                            belegeFolder.file(pdfName, pdfBytes);
                         } catch (e) {
-                            console.warn('Fehler beim Zusammenführen eines Belegs:', e);
+                            console.warn('Fehler beim Hinzufügen eines Belegs:', e);
                         }
                         
-
                     }
-                }
-                
-                if (pdfDoc.getPageCount() > 0) {
-                    const mergedPdf = await pdfDoc.save();
-                    zip.file('Buchungen_Belege.pdf', mergedPdf);
                 }
 
                 const zipBlob = await zip.generateAsync({ type: 'blob' });
