@@ -2839,6 +2839,16 @@
                                         <p><i data-lucide="calendar" class="h-3 w-3 inline mr-1"></i>
                                             ${new Date(buchung.datum).toLocaleDateString('de-DE')}
                                         </p>
+                                        ${buchung.kundeName ? `
+                                            <p><i data-lucide="user" class="h-3 w-3 inline mr-1"></i>
+                                                ${buchung.kundeName}
+                                            </p>
+                                        ` : ''}
+                                        ${buchung.rechnungsnummer ? `
+                                            <p><i data-lucide="hash" class="h-3 w-3 inline mr-1"></i>
+                                                ${buchung.rechnungsnummer}
+                                            </p>
+              
                                         ${buchung.account ? `
                                             <p><i data-lucide="book-open" class="h-3 w-3 inline mr-1"></i>
                                                 <span class="font-medium">${buchung.account}</span> - ${accountName}
@@ -6723,23 +6733,31 @@
             if (reportType === 'vollstaendig' || reportType === 'buchungen') {
                 // Enhanced Buchungen Section
                 data.push(['💰 BUCHUNGEN & TRANSAKTIONEN']);
-                data.push(['Datum', 'Beschreibung', 'Typ', 'Kategorie', 'Konto', 'Netto (€)', 'MwSt (€)', 'Brutto (€)', 'Status', 'Trend']);
-                
-                buchungen.sort((a, b) => new Date(b.date) - new Date(a.date));
+                data.push(['Datum', 'Name/Firma', 'Rechnungsnummer', 'Beschreibung', 'Typ', 'Kategorie', 'Konto', 'Netto (€)', 'MwSt (€)', 'Brutto (€)', 'Status', 'Trend']);
+
+                buchungen.sort((a, b) => new Date(b.datum || b.date) - new Date(a.datum || a.date));
                 buchungen.forEach((buchung, index) => {
-                    const typeEmoji = buchung.type === 'einnahme' ? '💚' : '💸';
-                    const trend = index === 0 ? '📊 Neueste' : 
-                                 buchung.type === 'einnahme' ? '📈 Umsatz' : '📉 Ausgabe';
-                    
+                    const type = buchung.typ || buchung.type;
+                    const category = buchung.kategorie || buchung.category;
+                    const account = buchung.konto || buchung.account;
+                    const amount = parseFloat(buchung.betrag || buchung.amount || 0);
+                    const netto = buchung.betrag_netto_cent ? buchung.betrag_netto_cent / 100 : amount * 0.84;
+                    const mwst = buchung.mwst_betrag_cent ? buchung.mwst_betrag_cent / 100 : amount * 0.16;
+                    const typeEmoji = type === 'einnahme' ? '💚' : '💸';
+                    const trend = index === 0 ? '📊 Neueste' :
+                                 type === 'einnahme' ? '📈 Umsatz' : '📉 Ausgabe';
+
                     data.push([
-                        new Date(buchung.date).toLocaleDateString('de-DE'),
-                        buchung.description,
-                        typeEmoji + ' ' + (buchung.type === 'einnahme' ? 'Einnahme' : 'Ausgabe'),
-                        buchung.category || 'Keine Kategorie',
-                        buchung.account ? buchung.account + ' - ' + getAccountName(buchung.account) : 'Kein Konto',
-                        (parseFloat(buchung.amount) * 0.84).toFixed(2), // Estimated net
-                        (parseFloat(buchung.amount) * 0.16).toFixed(2), // Estimated VAT
-                        parseFloat(buchung.amount).toFixed(2),
+                        new Date(buchung.datum || buchung.date).toLocaleDateString('de-DE'),
+                        buchung.kundeName || '',
+                        buchung.rechnungsnummer || '',
+                        buchung.beschreibung || buchung.description,
+                        typeEmoji + ' ' + (type === 'einnahme' ? 'Einnahme' : 'Ausgabe'),
+                        category || 'Keine Kategorie',
+                        account ? account + ' - ' + getAccountName(account) : 'Kein Konto',
+                        netto.toFixed(2),
+                        mwst.toFixed(2),
+                        amount.toFixed(2),
                         '✅ Abgeschlossen',
                         trend
                     ]);
@@ -8039,9 +8057,9 @@ Optispar Buchhaltungssystem
             csv += `Erstellt am,${new Date().toLocaleDateString('de-DE')}\n\n`;
             
             csv += 'Buchungen:\n';
-            csv += 'Datum,Kunde,Beschreibung,Betrag,Typ\n';
+            csv += 'Datum,Kunde,Rechnungsnummer,Beschreibung,Betrag,Typ\n';
             buchungen.forEach(b => {
-                csv += `${b.datum},${b.kundeName},${b.beschreibung},${b.betrag},${b.typ}\n`;
+                csv += `${b.datum},${b.kundeName},${b.rechnungsnummer || ''},${b.beschreibung},${b.betrag},${b.typ}\n`;
             });
             
             csv += '\nProdukte:\n';
