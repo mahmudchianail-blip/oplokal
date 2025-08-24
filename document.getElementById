@@ -8190,8 +8190,14 @@ Optispar Buchhaltungssystem
                 document.getElementById('product-form').addEventListener('submit', handleProductSubmit);
                 document.getElementById('user-form').addEventListener('submit', handleUserSubmit);
                 document.getElementById('settings-form').addEventListener('submit', handleSettingsChange);
-                document.getElementById('open-user-btn')?.addEventListener('click', openUserModal);
-                document.getElementById('open-settings-btn')?.addEventListener('click', openSettingsModal);
+                const openUserBtn = document.getElementById('open-user-btn');
+                if (openUserBtn) {
+                    openUserBtn.addEventListener('click', openUserModal);
+                }
+                const openSettingsBtn = document.getElementById('open-settings-btn');
+                if (openSettingsBtn) {
+                    openSettingsBtn.addEventListener('click', openSettingsModal);
+                }
                 // Modal close on outside click
                 document.querySelectorAll('.modal').forEach(modal => {
                     modal.addEventListener('click', (e) => {
