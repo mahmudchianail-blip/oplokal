@@ -2249,7 +2249,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.14.06';
+        const APP_VERSION = '0.02.14.07';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -8282,21 +8282,32 @@ Optispar Buchhaltungssystem
                 localStorage.setItem(`optispar_chat_${id}`, JSON.stringify(messages[id] || []));
             }
 
-            function renderConversations() {
+            async function renderConversations() {
                 convListEl.innerHTML = '';
-                if (!conversations.length) {
+                if (!users.length) users = await loadUsers();
+                const list = users.filter(u => u.id !== currentUser()?.id);
+                if (!list.length) {
                     noConvEl.classList.remove('hidden');
                     return;
                 }
                 noConvEl.classList.add('hidden');
-                conversations.forEach(conv => {
-                    const other = conv.participants.find(p => p !== currentUser()?.id);
-                    const name = conv.otherName || other || 'Unbekannt';
+                list.forEach(u => {
+                    const conv = conversations.find(c => c.participants.includes(u.id));
+                    const unread = conv ? conv.unread : 0;
                     const item = document.createElement('div');
                     item.className = 'p-3 hover:bg-gray-100 cursor-pointer flex justify-between';
-                    item.dataset.name = name.toLowerCase();
-                    item.innerHTML = `<span>${name}</span>` + (conv.unread ? `<span class="ml-2 bg-blue-500 text-white text-xs rounded-full px-2">${conv.unread}</span>` : '');
-                    item.addEventListener('click', () => openConversation(conv.id));
+                    item.dataset.name = u.name.toLowerCase();
+                    item.innerHTML = `<span>${u.name}</span>` + (unread ? `<span class="ml-2 bg-blue-500 text-white text-xs rounded-full px-2">${unread}</span>` : '');
+                    item.addEventListener('click', () => {
+                        let existing = conversations.find(c => c.participants.includes(u.id));
+                        if (!existing) {
+                            existing = { id: 'c' + Date.now(), participants: [currentUser().id, u.id], last_message_at: null, unread: 0, otherName: u.name, otherRole: u.rolle };
+                            conversations.push(existing);
+                            saveConversations();
+                        }
+                        messages[existing.id] = messages[existing.id] || [];
+                        openConversation(existing.id);
+                    });
                     convListEl.appendChild(item);
                 });
             }
@@ -8430,45 +8441,11 @@ Optispar Buchhaltungssystem
 
             attachBtn.addEventListener('click', () => attachInput.click());
 
-            searchEl.addEventListener('input', async () => {
+            searchEl.addEventListener('input', () => {
                 const term = searchEl.value.toLowerCase();
                 Array.from(convListEl.children).forEach(item => {
                     item.classList.toggle('hidden', !item.dataset.name.includes(term));
                 });
-                if (!users.length) users = await loadUsers();
-                const suggEl = document.getElementById('user-suggestions');
-                suggEl.innerHTML = '';
-                if (term) {
-                    const matches = users.filter(u =>
-                        (u.name && u.name.toLowerCase().includes(term)) ||
-                        (u.email && u.email.toLowerCase().includes(term))
-                    );
-                    if (matches.length) {
-                        suggEl.classList.remove('hidden');
-                        matches.forEach(u => {
-                            const item = document.createElement('div');
-                            item.className = 'p-2 hover:bg-gray-100 cursor-pointer';
-                            item.textContent = u.name;
-                            item.addEventListener('click', () => {
-                                let conv = conversations.find(c => c.participants.includes(u.id));
-                                if (!conv) {
-                                    conv = { id: 'c' + Date.now(), participants: [currentUser().id, u.id], last_message_at: null, unread: 0, otherName: u.name, otherRole: u.rolle };
-                                    conversations.push(conv);
-                                    saveConversations();
-                                }
-                                messages[conv.id] = messages[conv.id] || [];
-                                openConversation(conv.id);
-                                suggEl.classList.add('hidden');
-                                searchEl.value = '';
-                            });
-                            suggEl.appendChild(item);
-                        });
-                    } else {
-                        suggEl.classList.add('hidden');
-                    }
-                } else {
-                    suggEl.classList.add('hidden');
-                }
             });
 
             async function loadUsers() {
@@ -8483,17 +8460,7 @@ Optispar Buchhaltungssystem
 
             document.getElementById('new-chat-btn').addEventListener('click', async () => {
                 if (!users.length) users = await loadUsers();
-                const name = prompt('Empfänger wählen: ' + users.map(u => u.name).join(', '));
-                const u = users.find(us => us.name === name);
-                if (!u) return;
-                let conv = conversations.find(c => c.participants.includes(u.id));
-                if (!conv) {
-                    conv = { id: 'c' + Date.now(), participants: [currentUser().id, u.id], last_message_at: null, unread: 0, otherName: u.name, otherRole: u.rolle };
-                    conversations.push(conv);
-                    saveConversations();
-                }
-                messages[conv.id] = messages[conv.id] || [];
-                openConversation(conv.id);
+                renderConversations();   
             });
 
             renderConversations();
