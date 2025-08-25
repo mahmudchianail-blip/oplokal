@@ -524,6 +524,10 @@
                         <i data-lucide="plus-circle" class="h-4 w-4"></i>
                         Einnahme buchen
                     </button>
+                    <button class="btn btn-blue" onclick="openUserListModal()" data-admin-only>
+                        <i data-lucide="users" class="h-4 w-4"></i>
+                        Nutzer verwalten
+                    </button>
                     <button class="btn btn-blue" onclick="openUserModal()" data-admin-only>
                         <i data-lucide="user-plus" class="h-4 w-4"></i>
                         Nutzer anlegen
@@ -1812,6 +1816,19 @@
             </form>
         </div>
     </div>
+    <!-- User List Modal -->
+    <div id="user-list-modal" class="modal" data-admin-only>
+        <div class="modal-content w-full max-w-lg bg-white rounded-xl shadow-2xl p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-semibold">Benutzer verwalten</h2>
+                <button onclick="closeUserListModal()" class="text-gray-500 hover:text-gray-700" aria-label="Schließen">&times;</button>
+            </div>
+            <div id="user-list-container" class="space-y-2 max-h-80 overflow-y-auto"></div>
+            <div class="flex justify-end mt-4">
+                <button type="button" onclick="closeUserListModal()" class="btn btn-secondary">Schließen</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Settings Modal -->
     <div id="settings-modal" class="modal">
@@ -2291,7 +2308,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.14.14';
+        const APP_VERSION = '0.02.14.16';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -3994,6 +4011,67 @@
             }
         }
 
+        async function openUserListModal() {
+            if (!isAdmin) {
+                showNotification('Keine Berechtigung', 'error');
+                return;
+            }
+            const container = document.getElementById('user-list-container');
+            container.innerHTML = '';
+            const users = await app.db.getAll('users');
+            users.forEach(u => {
+                const row = document.createElement('div');
+                row.className = 'flex justify-between items-center border p-2 rounded';
+                row.innerHTML = `<div><p class="font-medium">${u.name}</p><p class="text-sm text-gray-500">${u.email}</p></div>` +
+                                `<div class="space-x-2"><button class="btn btn-sm btn-secondary" onclick="changeUserPassword('${u.id}')">Passwort ändern</button>` +
+                                `<button class="btn btn-sm bg-red-600 text-white hover:bg-red-700" onclick="confirmDeleteUser('${u.id}')">Löschen</button></div>`;
+                container.appendChild(row);
+            });
+            document.getElementById('user-list-modal').classList.add('active');
+        }
+
+        function closeUserListModal() {
+            document.getElementById('user-list-modal').classList.remove('active');
+        }
+
+        async function changeUserPassword(userId) {
+            if (!isAdmin) {
+                showNotification('Keine Berechtigung', 'error');
+                return;
+            }
+            const newPass = prompt('Neues Passwort eingeben:');
+            if (!newPass) return;
+            try {
+                const user = await app.db.get('users', userId);
+                if (user) {
+                    user.password = newPass;
+                    await app.db.put('users', user);
+                    showNotification('Passwort aktualisiert', 'success');
+                    openUserListModal();
+                }
+            } catch (err) {
+                console.error('Error updating password', err);
+                showNotification('Fehler beim Aktualisieren des Passworts', 'error');
+            }
+        }
+
+        function confirmDeleteUser(userId) {
+            if (!isAdmin) {
+                showNotification('Keine Berechtigung', 'error');
+                return;
+            }
+            openDeleteModal('Benutzer wirklich löschen?', async () => {
+                try {
+                    await app.db.delete('users', userId);
+                    showNotification('Benutzer gelöscht', 'success');
+                    openUserListModal();
+                } catch (err) {
+                    console.error('Error deleting user', err);
+                    showNotification('Fehler beim Löschen des Benutzers', 'error');
+                }
+            });
+        }
+
         function openSettingsModal() {
             document.getElementById('settings-old-password').value = '';
             document.getElementById('settings-password').value = '';
@@ -4139,6 +4217,33 @@
                 console.error('Error generating invoice number:', error);
                 showNotification('Fehler beim Generieren der Rechnungsnummer', 'error');
             }
+        }
+
+        // Prefill description, account and category from last booking with same name
+        async function prefillBookingFields() {
+            try {
+                const name = document.getElementById('booking-kunde-name').value.trim();
+                if (!name) return;
+
+                const bookings = await app.db.getAll('buchungen');
+                const getTime = b => new Date(b.timestamp || b.datum || 0).getTime();
+                const lastBooking = bookings
+                    .filter(b => b.kundeName === name)
+                    .sort((a, b) => getTime(b) - getTime(a))[0];
+
+                if (lastBooking) {
+                    document.getElementById('booking-beschreibung').value = lastBooking.beschreibung || '';
+                    document.getElementById('booking-konto').value = lastBooking.konto || '';
+                    document.getElementById('booking-kategorie').value = lastBooking.kategorie || '';
+                }
+            } catch (error) {
+                console.error('Error pre-filling booking fields:', error);
+            }
+        }
+
+        async function handleCustomerChange() {
+            await generateInvoiceNumber();
+            await prefillBookingFields();
         }
 
         // Validate invoice number uniqueness per customer ONLY
@@ -8299,6 +8404,7 @@ Optispar Buchhaltungssystem
                 preventDoubleSubmit('user-form');
                 preventDoubleSubmit('settings-form');
                 document.getElementById('booking-form').addEventListener('submit', handleBookingSubmit);
+                document.getElementById('booking-kunde-name').addEventListener('change', handleCustomerChange);
                 document.getElementById('product-form').addEventListener('submit', handleProductSubmit);
                 document.getElementById('user-form').addEventListener('submit', handleUserSubmit);
                 document.getElementById('settings-form').addEventListener('submit', handleSettingsChange);
