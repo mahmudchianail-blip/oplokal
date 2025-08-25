@@ -154,10 +154,54 @@
         }
         .modal-content {
             background: white;
-            border-radius: 8px;
-            max-width: 90vw;
+            border-radius: 12px;
+            padding: 2rem;
+            width: 100%;
+            max-width: 500px;
             max-height: 90vh;
             overflow-y: auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            animation: modalFadeIn 0.2s ease-out;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 0;
+        }
+        .modal-header button {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #6b7280;
+            transition: color 0.2s ease;
+        }
+        .modal-header button:hover {
+            color: #374151;
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         /* Tab Styles */
@@ -1811,8 +1855,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3 class="modal-title" id="konto-modal-title">Neues Konto</h3>
-                <button onclick="closeKontoModal()" class="text-gray-500 hover:text-gray-700" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
-            </div>
+                <button onclick="closeKontoModal()">&times;</button>            </div>
             <form id="konto-form">
                 <div class="form-group">
                     <label class="form-label">Kontonummer *</label>
@@ -2248,7 +2291,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.14.08';
+        const APP_VERSION = '0.02.14.09';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -4828,13 +4871,16 @@
             const modal = document.getElementById('konto-modal');
             const title = document.getElementById('konto-modal-title');
             const form = document.getElementById('konto-form');
+            const submitBtn = form.querySelector('button[type="submit"]');
             
             if (kontoNummer) {
                 title.textContent = 'Konto bearbeiten';
+                submitBtn.textContent = 'Konto speichern';
                 form.dataset.kontoNummer = kontoNummer;
                 // Load existing konto data here if needed
             } else {
                 title.textContent = 'Neues Konto';
+                submitBtn.textContent = 'Konto anlegen';
                 form.removeAttribute('data-konto-nummer');
             }
             
