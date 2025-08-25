@@ -2308,7 +2308,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.14.16';
+        const APP_VERSION = '0.02.14.17';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -4022,10 +4022,17 @@
             users.forEach(u => {
                 const row = document.createElement('div');
                 row.className = 'flex justify-between items-center border p-2 rounded';
-                row.innerHTML = `<div><p class="font-medium">${u.name}</p><p class="text-sm text-gray-500">${u.email}</p></div>` +
-                                `<div class="space-x-2"><button class="btn btn-sm btn-secondary" onclick="changeUserPassword('${u.id}')">Passwort ändern</button>` +
-                                `<button class="btn btn-sm bg-red-600 text-white hover:bg-red-700" onclick="confirmDeleteUser('${u.id}')">Löschen</button></div>`;
-                container.appendChild(row);
+                row.innerHTML =
+                    `<div><p class="font-medium">${u.name}</p><p class="text-sm text-gray-500">${u.email}</p></div>` +
+                    `<div class="flex items-center space-x-2">` +
+                    `<select class="form-input text-sm" onchange="changeUserRole('${u.id}', this.value)">` +
+                    `<option value="user" ${u.role === 'user' ? 'selected' : ''}>Nutzer</option>` +
+                    `<option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Admin</option>` +
+                    `</select>` +
+                    `<button class="btn btn-sm btn-secondary" onclick="changeUserPassword('${u.id}')">Passwort ändern</button>` +
+                    `<button class="btn btn-sm bg-red-600 text-white hover:bg-red-700" onclick="confirmDeleteUser('${u.id}')">Löschen</button>` +
+                    `</div>`;
+               container.appendChild(row);
             });
             document.getElementById('user-list-modal').classList.add('active');
         }
@@ -4052,6 +4059,42 @@
             } catch (err) {
                 console.error('Error updating password', err);
                 showNotification('Fehler beim Aktualisieren des Passworts', 'error');
+            }
+        }
+
+        async function changeUserRole(userId, newRole) {
+            if (!isAdmin) {
+                showNotification('Keine Berechtigung', 'error');
+                return;
+            }
+            const confirmPass = prompt('Bitte Passwort zur Bestätigung eingeben:');
+            if (!confirmPass) return;
+            if (!app.currentUser || app.currentUser.password !== confirmPass) {
+                showNotification('Passwort falsch', 'error');
+                openUserListModal();
+                return;
+            }
+            try {
+                const user = await app.db.get('users', userId);
+                if (user) {
+                    user.role = newRole;
+                    await app.db.put('users', user);
+                    showNotification('Rolle aktualisiert', 'success');
+                    if (app.currentUser.id === userId) {
+                        app.currentUser.role = newRole;
+                        isAdmin = newRole === 'admin';
+                        saveSession();
+                        toggleAdminFeatures();
+                    }
+                }
+            } catch (err) {
+                console.error('Error updating role', err);
+                showNotification('Fehler beim Aktualisieren der Rolle', 'error');
+            }
+            if (isAdmin) {
+                openUserListModal();
+            } else {
+                closeUserListModal();
             }
         }
 
