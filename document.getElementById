@@ -2291,7 +2291,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.14.09';
+        const APP_VERSION = '0.02.14.10';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -2524,65 +2524,97 @@
                 const kontenCount = await this.count('konten');
                 if (kontenCount > 0) return;
 
-                // Vollständiger SKR03 Kontenrahmen
+                // SKR03 Kontenrahmen
                 const konten = [
-                    // Bilanzkonten - Aktiva
-                    { nummer: 1000, name: "Kasse", typ: "Aktiv", kategorie: "Zahlungsmittel", aktiv: true },
-                    { nummer: 1200, name: "Bank", typ: "Aktiv", kategorie: "Zahlungsmittel", aktiv: true },
-                    { nummer: 1210, name: "Bundesbank", typ: "Aktiv", kategorie: "Zahlungsmittel", aktiv: true },
-                    { nummer: 1400, name: "Forderungen aus Lieferungen und Leistungen", typ: "Aktiv", kategorie: "Forderungen", aktiv: true },
-                    { nummer: 1410, name: "Forderungen gegen Gesellschafter", typ: "Aktiv", kategorie: "Forderungen", aktiv: true },
-                    { nummer: 1500, name: "Sonstige Vermögensgegenstände", typ: "Aktiv", kategorie: "Umlaufvermögen", aktiv: true },
-                    { nummer: 1600, name: "Vorräte", typ: "Aktiv", kategorie: "Umlaufvermögen", aktiv: true },
-                    
+                    { nummer: 1000, name: 'Kasse', typ: 'Aktiv', kategorie: 'Zahlungsmittel', aktiv: true },
+                    { nummer: 1010, name: 'Postbank', typ: 'Aktiv', kategorie: 'Zahlungsmittel', aktiv: true },
+                    { nummer: 1020, name: 'Kasse Filiale 1', typ: 'Aktiv', kategorie: 'Zahlungsmittel', aktiv: true },
+                    { nummer: 1200, name: 'Bank', typ: 'Aktiv', kategorie: 'Zahlungsmittel', aktiv: true },
+                    { nummer: 1210, name: 'Bundesbank', typ: 'Aktiv', kategorie: 'Zahlungsmittel', aktiv: true },
+                    { nummer: 1300, name: 'Schecks', typ: 'Aktiv', kategorie: 'Zahlungsmittel', aktiv: true },
+                    { nummer: 1400, name: 'Forderungen aus Lieferungen und Leistungen', typ: 'Aktiv', kategorie: 'Forderungen', aktiv: true },
+                    { nummer: 1401, name: 'Forderungen aus Lieferungen und Leistungen (EU)', typ: 'Aktiv', kategorie: 'Forderungen', aktiv: true },
+                    { nummer: 1410, name: 'Forderungen gegen Gesellschafter', typ: 'Aktiv', kategorie: 'Forderungen', aktiv: true },
+                    { nummer: 1450, name: 'Zweifelhafte Forderungen', typ: 'Aktiv', kategorie: 'Forderungen', aktiv: true },
+                    { nummer: 1500, name: 'Sonstige Vermögensgegenstände', typ: 'Aktiv', kategorie: 'Umlaufvermögen', aktiv: true },
+                    { nummer: 1600, name: 'Vorräte', typ: 'Aktiv', kategorie: 'Umlaufvermögen', aktiv: true },
+                    { nummer: 1610, name: 'Rohstoffe', typ: 'Aktiv', kategorie: 'Umlaufvermögen', aktiv: true },
+                    { nummer: 1620, name: 'Hilfsstoffe', typ: 'Aktiv', kategorie: 'Umlaufvermögen', aktiv: true },
+                    { nummer: 1630, name: 'Betriebsstoffe', typ: 'Aktiv', kategorie: 'Umlaufvermögen', aktiv: true },
+
                     // Steuerkonten
-                    { nummer: 1571, name: "Vorsteuer 7%", typ: "Steuer", kategorie: "Steuer", aktiv: true },
-                    { nummer: 1575, name: "Vorsteuer 16%", typ: "Steuer", kategorie: "Steuer", aktiv: true },
-                    { nummer: 1576, name: "Vorsteuer 19%", typ: "Steuer", kategorie: "Steuer", aktiv: true },
-                    { nummer: 1771, name: "Umsatzsteuer 7%", typ: "Steuer", kategorie: "Steuer", aktiv: true },
-                    { nummer: 1775, name: "Umsatzsteuer 16%", typ: "Steuer", kategorie: "Steuer", aktiv: true },
-                    { nummer: 1776, name: "Umsatzsteuer 19%", typ: "Steuer", kategorie: "Steuer", aktiv: true },
-                    
-                    // Bilanzkonten - Passiva
-                    { nummer: 2000, name: "Eigenkapital", typ: "Passiv", kategorie: "Eigenkapital", aktiv: true },
-                    { nummer: 2100, name: "Gewinnvortrag", typ: "Passiv", kategorie: "Eigenkapital", aktiv: true },
-                    { nummer: 2200, name: "Verlustvortrag", typ: "Passiv", kategorie: "Eigenkapital", aktiv: true },
-                    { nummer: 3300, name: "Verbindlichkeiten aus Lieferungen und Leistungen", typ: "Passiv", kategorie: "Fremdkapital", aktiv: true },
-                    
+                    { nummer: 1571, name: 'Vorsteuer 7%', typ: 'Steuer', kategorie: 'Steuer', aktiv: true },
+                    { nummer: 1575, name: 'Vorsteuer 16%', typ: 'Steuer', kategorie: 'Steuer', aktiv: true },
+                    { nummer: 1576, name: 'Vorsteuer 19%', typ: 'Steuer', kategorie: 'Steuer', aktiv: true },
+                    { nummer: 1577, name: 'Einfuhrumsatzsteuer', typ: 'Steuer', kategorie: 'Steuer', aktiv: true },
+                    { nummer: 1771, name: 'Umsatzsteuer 7%', typ: 'Steuer', kategorie: 'Steuer', aktiv: true },
+                    { nummer: 1775, name: 'Umsatzsteuer 16%', typ: 'Steuer', kategorie: 'Steuer', aktiv: true },
+                    { nummer: 1776, name: 'Umsatzsteuer 19%', typ: 'Steuer', kategorie: 'Steuer', aktiv: true },
+                    { nummer: 1779, name: 'Umsatzsteuer-Vorauszahlungen', typ: 'Steuer', kategorie: 'Steuer', aktiv: true },
+
+                    // Passivkonten
+                    { nummer: 2000, name: 'Eigenkapital', typ: 'Passiv', kategorie: 'Eigenkapital', aktiv: true },
+                    { nummer: 2050, name: 'Privatentnahmen', typ: 'Passiv', kategorie: 'Eigenkapital', aktiv: true },
+                    { nummer: 2100, name: 'Gewinnvortrag', typ: 'Passiv', kategorie: 'Eigenkapital', aktiv: true },
+                    { nummer: 2200, name: 'Verlustvortrag', typ: 'Passiv', kategorie: 'Eigenkapital', aktiv: true },
+                    { nummer: 3000, name: 'Verbindlichkeiten gegenüber Kreditinstituten', typ: 'Passiv', kategorie: 'Fremdkapital', aktiv: true },
+                    { nummer: 3200, name: 'Verbindlichkeiten aus Lieferungen und Leistungen', typ: 'Passiv', kategorie: 'Fremdkapital', aktiv: true },
+                    { nummer: 3300, name: 'Verbindlichkeiten aus Lieferungen und Leistungen', typ: 'Passiv', kategorie: 'Fremdkapital', aktiv: true },
+                    { nummer: 3400, name: 'Empfangene Anzahlungen', typ: 'Passiv', kategorie: 'Fremdkapital', aktiv: true },
+
                     // Ertragskonten
-                    { nummer: 4000, name: "Umsatzerlöse 19%", typ: "Ertrag", kategorie: "Erträge", aktiv: true },
-                    { nummer: 4007, name: "Umsatzerlöse 7%", typ: "Ertrag", kategorie: "Erträge", aktiv: true },
-                    { nummer: 4280, name: "Sonstige betriebliche Erträge", typ: "Ertrag", kategorie: "Erträge", aktiv: true },
-                    { nummer: 4300, name: "Erträge aus Anlagevermögen", typ: "Ertrag", kategorie: "Erträge", aktiv: true },
-                    { nummer: 4400, name: "Erträge aus anderen Wertpapieren", typ: "Ertrag", kategorie: "Erträge", aktiv: true },
-                    
+                    { nummer: 4000, name: 'Umsatzerlöse 19%', typ: 'Ertrag', kategorie: 'Erträge', aktiv: true },
+                    { nummer: 4001, name: 'Umsatzerlöse 19% innergem. Lieferung', typ: 'Ertrag', kategorie: 'Erträge', aktiv: true },
+                    { nummer: 4007, name: 'Umsatzerlöse 7%', typ: 'Ertrag', kategorie: 'Erträge', aktiv: true },
+                    { nummer: 4300, name: 'Erträge aus Anlagevermögen', typ: 'Ertrag', kategorie: 'Erträge', aktiv: true },
+                    { nummer: 4400, name: 'Erträge aus anderen Wertpapieren', typ: 'Ertrag', kategorie: 'Erträge', aktiv: true },
+                    { nummer: 4800, name: 'Mieterträge', typ: 'Ertrag', kategorie: 'Erträge', aktiv: true },
+                    { nummer: 4900, name: 'Bestandsveränderungen', typ: 'Ertrag', kategorie: 'Erträge', aktiv: true },
+
                     // Aufwandskonten - Wareneinsatz
-                    { nummer: 3200, name: "Wareneinkauf 19%", typ: "Aufwand", kategorie: "Aufwendungen", aktiv: true },
-                    { nummer: 3207, name: "Wareneinkauf 7%", typ: "Aufwand", kategorie: "Aufwendungen", aktiv: true },
-                    { nummer: 3400, name: "Nachlässe auf Wareneinkäufe", typ: "Aufwand", kategorie: "Aufwendungen", aktiv: true },
-                    
-                    // Aufwandskonten - Personalkosten
-                    { nummer: 6000, name: "Löhne und Gehälter", typ: "Aufwand", kategorie: "Aufwendungen", aktiv: true },
-                    { nummer: 6100, name: "Gesetzliche soziale Aufwendungen", typ: "Aufwand", kategorie: "Aufwendungen", aktiv: true },
-                    { nummer: 6200, name: "Beiträge zur Berufsgenossenschaft", typ: "Aufwand", kategorie: "Aufwendungen", aktiv: true },
-                    
+                    { nummer: 5000, name: 'Wareneingang', typ: 'Aufwand', kategorie: 'Aufwendungen', aktiv: true },
+                    { nummer: 5200, name: 'Wareneinsatz 19%', typ: 'Aufwand', kategorie: 'Aufwendungen', aktiv: true },
+                    { nummer: 5201, name: 'Wareneinsatz 7%', typ: 'Aufwand', kategorie: 'Aufwendungen', aktiv: true },
+                    { nummer: 5400, name: 'Bezugsnebenkosten', typ: 'Aufwand', kategorie: 'Aufwendungen', aktiv: true },
+                    { nummer: 5800, name: 'Bestandsveränderung Waren', typ: 'Aufwand', kategorie: 'Aufwendungen', aktiv: true },
+
+                    // Aufwandskonten - Personal
+                    { nummer: 6000, name: 'Löhne und Gehälter', typ: 'Aufwand', kategorie: 'Aufwendungen', aktiv: true },
+                    { nummer: 6020, name: 'Gehälter', typ: 'Aufwand', kategorie: 'Aufwendungen', aktiv: true },
+                    { nummer: 6030, name: 'Löhne', typ: 'Aufwand', kategorie: 'Aufwendungen', aktiv: true },
+                    { nummer: 6100, name: 'Gesetzliche soziale Aufwendungen', typ: 'Aufwand', kategorie: 'Aufwendungen', aktiv: true },
+                    { nummer: 6200, name: 'Beiträge zur Berufsgenossenschaft', typ: 'Aufwand', kategorie: 'Aufwendungen', aktiv: true },
+
                     // Aufwandskonten - Betriebsausgaben
-                    { nummer: 6300, name: "Mieten und Pachten für Räume", typ: "Aufwand", kategorie: "Aufwendungen", aktiv: true },
-                    { nummer: 6400, name: "Abschreibungen auf Sachanlagevermögen", typ: "Aufwand", kategorie: "Aufwendungen", aktiv: true },
-                    { nummer: 6500, name: "Reparaturen und Instandhaltung", typ: "Aufwand", kategorie: "Aufwendungen", aktiv: true },
-                    { nummer: 6600, name: "Werbekosten", typ: "Aufwand", kategorie: "Aufwendungen", aktiv: true },
-                    { nummer: 6700, name: "Bürobedarf", typ: "Aufwand", kategorie: "Aufwendungen", aktiv: true },
-                    { nummer: 6800, name: "Porto, Telefon, Internet", typ: "Aufwand", kategorie: "Aufwendungen", aktiv: true },
-                    { nummer: 6820, name: "Rechts- und Beratungskosten", typ: "Aufwand", kategorie: "Aufwendungen", aktiv: true },
-                    { nummer: 6840, name: "Versicherungen", typ: "Aufwand", kategorie: "Aufwendungen", aktiv: true },
-                    { nummer: 6900, name: "Reisekosten", typ: "Aufwand", kategorie: "Aufwendungen", aktiv: true },
-                    { nummer: 6920, name: "Fortbildungskosten", typ: "Aufwand", kategorie: "Aufwendungen", aktiv: true },
-                    
+                    { nummer: 6300, name: 'Mieten und Pachten für Räume', typ: 'Aufwand', kategorie: 'Aufwendungen', aktiv: true },
+                    { nummer: 6400, name: 'Abschreibungen auf Sachanlagen', typ: 'Aufwand', kategorie: 'Aufwendungen', aktiv: true },
+                    { nummer: 6500, name: 'Reparaturen und Instandhaltung', typ: 'Aufwand', kategorie: 'Aufwendungen', aktiv: true },
+                    { nummer: 6600, name: 'Werbekosten', typ: 'Aufwand', kategorie: 'Aufwendungen', aktiv: true },
+                    { nummer: 6700, name: 'Bürobedarf', typ: 'Aufwand', kategorie: 'Aufwendungen', aktiv: true },
+                    { nummer: 6800, name: 'Porto, Telefon, Internet', typ: 'Aufwand', kategorie: 'Aufwendungen', aktiv: true },
+                    { nummer: 6820, name: 'Rechts- und Beratungskosten', typ: 'Aufwand', kategorie: 'Aufwendungen', aktiv: true },
+                    { nummer: 6840, name: 'Versicherungen', typ: 'Aufwand', kategorie: 'Aufwendungen', aktiv: true },
+                    { nummer: 6850, name: 'Beiträge', typ: 'Aufwand', kategorie: 'Aufwendungen', aktiv: true },
+                    { nummer: 6900, name: 'Reisekosten', typ: 'Aufwand', kategorie: 'Aufwendungen', aktiv: true },
+                    { nummer: 6920, name: 'Fortbildungskosten', typ: 'Aufwand', kategorie: 'Aufwendungen', aktiv: true },
+
                     // Weitere Aufwandskonten
-                    { nummer: 7000, name: "Zinsen und ähnliche Aufwendungen", typ: "Aufwand", kategorie: "Aufwendungen", aktiv: true },
-                    { nummer: 7200, name: "Kfz-Kosten", typ: "Aufwand", kategorie: "Aufwendungen", aktiv: true },
-                    { nummer: 7300, name: "Bewirtungskosten", typ: "Aufwand", kategorie: "Aufwendungen", aktiv: true },
-                    { nummer: 7400, name: "Sonstige betriebliche Aufwendungen", typ: "Aufwand", kategorie: "Aufwendungen", aktiv: true }
+                    { nummer: 7000, name: 'Zinsen und ähnliche Aufwendungen', typ: 'Aufwand', kategorie: 'Aufwendungen', aktiv: true },
+                    { nummer: 7030, name: 'Zinsaufwendungen für Bankkredite', typ: 'Aufwand', kategorie: 'Aufwendungen', aktiv: true },
+                    { nummer: 7200, name: 'Kfz-Kosten', typ: 'Aufwand', kategorie: 'Aufwendungen', aktiv: true },
+                    { nummer: 7300, name: 'Bewirtungskosten', typ: 'Aufwand', kategorie: 'Aufwendungen', aktiv: true },
+                    { nummer: 7320, name: 'Geschenke', typ: 'Aufwand', kategorie: 'Aufwendungen', aktiv: true },
+                    { nummer: 7400, name: 'Sonstige betriebliche Aufwendungen', typ: 'Aufwand', kategorie: 'Aufwendungen', aktiv: true },
+                    { nummer: 7500, name: 'Verluste aus dem Abgang von Vermögensgegenständen', typ: 'Aufwand', kategorie: 'Aufwendungen', aktiv: true },
+                    { nummer: 7600, name: 'Büro- und Verwaltungsaufwand', typ: 'Aufwand', kategorie: 'Aufwendungen', aktiv: true },
+                    { nummer: 7700, name: 'Versorgungsaufwand', typ: 'Aufwand', kategorie: 'Aufwendungen', aktiv: true },
+                    { nummer: 7790, name: 'Sonstige Steuern', typ: 'Aufwand', kategorie: 'Aufwendungen', aktiv: true },
+
+                    // Abschlusskonten
+                    { nummer: 8000, name: 'Privatentnahmen Sachentnahme', typ: 'Passiv', kategorie: 'Eigenkapital', aktiv: true },
+                    { nummer: 8800, name: 'Eigenverbrauch', typ: 'Ertrag', kategorie: 'Eigenkapital', aktiv: true },
+                    { nummer: 9000, name: 'GuV-Konto', typ: 'Erfolg', kategorie: 'Abschluss', aktiv: true },
+                    { nummer: 9999, name: 'Schlussbilanzkonto', typ: 'Abschluss', kategorie: 'Abschluss', aktiv: true }
                 ];
 
                 // Konten erstellen
