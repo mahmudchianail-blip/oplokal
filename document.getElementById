@@ -1635,11 +1635,8 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium mb-2">Buchungskonto *</label>
-                            <!-- Suchfeld für schnellere Kontoauswahl -->
-                            <input type="text" id="booking-konto-search" class="form-input mb-2" placeholder="Konto suchen...">
-                            <select id="booking-konto" class="form-select" required>
-                                <option value="">Konto auswählen...</option>
-                            </select>
+                            <input type="text" id="booking-konto" class="form-input mb-2" list="booking-konto-options" placeholder="Konto suchen..." required>
+                            <datalist id="booking-konto-options"></datalist>
                             <p class="text-xs text-gray-500 mt-1">Wählen Sie das passende Buchungskonto aus</p>
                         </div>
                         
@@ -2293,7 +2290,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.14.11';
+        const APP_VERSION = '0.02.14.12';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -3677,22 +3674,9 @@
                 const konten = await app.db.getAll('konten');
                 
                 // Für Buchungsmodal
-                const bookingAccountSelect = document.getElementById('booking-konto');
-                if (bookingAccountSelect && konten.length > 0) {
-                    populateAccountSelect(bookingAccountSelect, konten, true);
-
-                    // Suche zur schnellen Filterung der Konten
-                    const accountSearch = document.getElementById('booking-konto-search');
-                    if (accountSearch) {
-                        accountSearch.addEventListener('input', () => {
-                            const term = accountSearch.value.toLowerCase();
-                            const filtered = konten.filter(k =>
-                                k.nummer.toString().includes(term) ||
-                                k.name.toLowerCase().includes(term)
-                            );
-                            populateAccountSelect(bookingAccountSelect, filtered, true);
-                        });
-                    }
+                const bookingAccountInput = document.getElementById('booking-konto');
+                if (bookingAccountInput && konten.length > 0) {
+                    populateAccountDatalist(bookingAccountInput, konten);
                 }
                 
                 // Für Buchungen-Filter
@@ -3704,6 +3688,18 @@
             } catch (error) {
                 console.error('Error loading booking accounts:', error);
             }
+        }
+
+        function populateAccountDatalist(inputElement, konten) {
+            const datalist = document.getElementById('booking-konto-options');
+            if (!datalist) return;
+
+            datalist.innerHTML = '';
+            konten.sort((a, b) => a.nummer - b.nummer).forEach(konto => {
+                const option = document.createElement('option');
+                option.value = `${konto.nummer} - ${konto.name}`;
+                datalist.appendChild(option);
+            });
         }
 
         function populateAccountSelect(selectElement, konten, isBookingModal = false) {
