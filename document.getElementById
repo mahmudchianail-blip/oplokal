@@ -989,11 +989,11 @@
                     </div>
                     <div class="text-center">
                         <div id="konto-count-ertrag" class="text-3xl font-bold mb-1">0</div>
-                        <div class="text-sm opacity-90">Ertragskonten</div>
+                        <div class="text-sm opacity-90">Einnahmekonten</div>
                     </div>
                     <div class="text-center">
                         <div id="konto-count-aufwand" class="text-3xl font-bold mb-1">0</div>
-                        <div class="text-sm opacity-90">Aufwandskonten</div>
+                        <div class="text-sm opacity-90">Ausgabenkonten</div>
                     </div>
                     <div class="text-center">
                         <div id="konto-count-bilanz" class="text-3xl font-bold mb-1">0</div>
@@ -1002,13 +1002,13 @@
                 </div>
             </div>
 
-            <!-- Ertragskonten (Example - will be replaced by dynamic content) -->
+            <!-- Einnahmekonten (Example - will be replaced by dynamic content) -->
             <div id="konten-categories">
                 <div class="card overflow-hidden mb-4">
                     <div class="bg-green-600 text-white px-6 py-4 flex items-center justify-between">
                         <div class="flex items-center gap-3">
                             <i data-lucide="trending-up" class="h-5 w-5"></i>
-                            <span class="font-semibold">Ertragskonten</span>
+                            <span class="font-semibold">Einnahmekonten</span>
                         </div>
                         <span class="bg-white bg-opacity-20 px-2 py-1 rounded text-sm font-semibold">4</span>
                     </div>
@@ -1866,10 +1866,10 @@
                     <input type="text" id="konto-name" class="form-input" required placeholder="z.B. Sonstige Erträge">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Kontotyp</label>
+                    <label class="form-label">Kontotyp (Einnahme/Ausgabe)</label>
                     <select id="konto-typ" class="form-input">
-                        <option value="Ertrag">Ertragskonto</option>
-                        <option value="Aufwand">Aufwandskonto</option>
+                        <option value="Ertrag">Einnahmekonto (Ertrag)</option>
+                        <option value="Aufwand">Ausgabenkonto (Aufwand)</option>
                         <option value="Aktiv">Aktivkonto (Bilanz)</option>
                         <option value="Passiv">Passivkonto (Bilanz)</option>
                         <option value="Steuer">Steuerkonto</option>
@@ -2291,7 +2291,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.14.13';
+        const APP_VERSION = '0.02.14.14';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -3696,7 +3696,16 @@
             if (!datalist) return;
 
             datalist.innerHTML = '';
-            konten.sort((a, b) => a.nummer - b.nummer).forEach(konto => {
+            
+            const bookingType = app && app.currentBookingType;
+            let filtered = konten;
+            if (bookingType === 'einnahme') {
+                filtered = konten.filter(k => k.typ === 'Ertrag');
+            } else if (bookingType === 'ausgabe') {
+                filtered = konten.filter(k => k.typ === 'Aufwand');
+            }
+
+            filtered.sort((a, b) => a.nummer - b.nummer).forEach(konto => {
                 const option = document.createElement('option');
                 option.value = `${konto.nummer} - ${konto.name}`;
                 datalist.appendChild(option);
@@ -3704,22 +3713,32 @@
         }
 
         function populateAccountSelect(selectElement, konten, isBookingModal = false) {
+            let filtered = konten;
+            if (isBookingModal) {
+                const bookingType = app && app.currentBookingType;
+                if (bookingType === 'einnahme') {
+                    filtered = konten.filter(k => k.typ === 'Ertrag');
+                } else if (bookingType === 'ausgabe') {
+                    filtered = konten.filter(k => k.typ === 'Aufwand');
+                }
+            }
+
             // Gruppiere Konten nach Typ
-            const ertragskonten = konten.filter(k => k.typ === 'Ertrag').sort((a, b) => a.nummer - b.nummer);
-            const aufwandskonten = konten.filter(k => k.typ === 'Aufwand').sort((a, b) => a.nummer - b.nummer);
-            const aktivkonten = konten.filter(k => k.typ === 'Aktiv').sort((a, b) => a.nummer - b.nummer);
-            const passivkonten = konten.filter(k => k.typ === 'Passiv').sort((a, b) => a.nummer - b.nummer);
-            const steuerkonten = konten.filter(k => k.typ === 'Steuer').sort((a, b) => a.nummer - b.nummer);
+            const ertragskonten = filtered.filter(k => k.typ === 'Ertrag').sort((a, b) => a.nummer - b.nummer);
+            const aufwandskonten = filtered.filter(k => k.typ === 'Aufwand').sort((a, b) => a.nummer - b.nummer);
+            const aktivkonten = filtered.filter(k => k.typ === 'Aktiv').sort((a, b) => a.nummer - b.nummer);
+            const passivkonten = filtered.filter(k => k.typ === 'Passiv').sort((a, b) => a.nummer - b.nummer);
+            const steuerkonten = filtered.filter(k => k.typ === 'Steuer').sort((a, b) => a.nummer - b.nummer);
             
             // Bestehende Optionen löschen (außer der ersten)
             const firstOption = selectElement.firstElementChild;
             selectElement.innerHTML = '';
             selectElement.appendChild(firstOption);
             
-            // Ertragskonten hinzufügen
+            // Einnahmekonten hinzufügen
             if (ertragskonten.length > 0) {
                 const ertragGroup = document.createElement('optgroup');
-                ertragGroup.label = 'Ertragskonten';
+                ertragGroup.label = 'Einnahmekonten';
                 ertragskonten.forEach(konto => {
                     const option = document.createElement('option');
                     option.value = konto.nummer;
@@ -3729,10 +3748,10 @@
                 selectElement.appendChild(ertragGroup);
             }
             
-            // Aufwandskonten hinzufügen
+            // Ausgabenkonten hinzufügen
             if (aufwandskonten.length > 0) {
                 const aufwandGroup = document.createElement('optgroup');
-                aufwandGroup.label = 'Aufwandskonten';
+                aufwandGroup.label = 'Ausgabenkonten';
                 aufwandskonten.forEach(konto => {
                     const option = document.createElement('option');
                     option.value = konto.nummer;
@@ -3801,15 +3820,13 @@
                 
                 console.log(`Opening booking modal for type: ${type}`);
             
-            // Find or create icon element
-            let icon = document.querySelector('#modal-icon i');
-            if (!icon) {
-                // Create icon element if it doesn't exist
-                const modalIcon = document.getElementById('modal-icon');
-                if (modalIcon) {
-                    icon = document.createElement('i');
-                    modalIcon.appendChild(icon);
-                }
+            // Reset and prepare icon container to avoid duplicated icons
+            const modalIcon = document.getElementById('modal-icon');
+            let icon = null;
+            if (modalIcon) {
+                modalIcon.innerHTML = '';
+                icon = document.createElement('i');
+                modalIcon.appendChild(icon);
             }
             
             // Reset form
@@ -5564,14 +5581,14 @@
                 html += `</div></div>`;
             }
             
-            // Ertragskonten
+            // Einnahmekonten
             if (ertragskonten.length > 0) {
                 html += `
                     <div class="card overflow-hidden mb-4">
                         <div class="bg-green-600 text-white px-6 py-4 flex items-center justify-between">
                             <div class="flex items-center gap-3">
                                 <i data-lucide="trending-up" class="h-5 w-5"></i>
-                                <span class="font-semibold">Ertragskonten</span>
+                                <span class="font-semibold">Einnahmekonten</span>
                             </div>
                             <span class="bg-white bg-opacity-20 px-2 py-1 rounded text-sm font-semibold">${ertragskonten.length}</span>
                         </div>
@@ -5585,14 +5602,14 @@
                 html += `</div></div>`;
             }
             
-            // Aufwandskonten
+            // Ausgabenkonten
             if (aufwandskonten.length > 0) {
                 html += `
                     <div class="card overflow-hidden mb-4">
                         <div class="bg-red-600 text-white px-6 py-4 flex items-center justify-between">
                             <div class="flex items-center gap-3">
                                 <i data-lucide="trending-down" class="h-5 w-5"></i>
-                                <span class="font-semibold">Aufwandskonten</span>
+                                <span class="font-semibold">Ausgabenkonten</span>
                             </div>
                             <span class="bg-white bg-opacity-20 px-2 py-1 rounded text-sm font-semibold">${aufwandskonten.length}</span>
                         </div>
