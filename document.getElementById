@@ -4408,6 +4408,7 @@
                 
                 const formData = {
                     id: app.db.generateUUID(),
+                    date: new Date().toISOString().split('T')[0],
                     kundeName: document.getElementById('booking-kunde-name').value,
                     rechnungsnummer: document.getElementById('booking-rechnung-nummer').value,
                     beschreibung: document.getElementById('booking-beschreibung').value,
