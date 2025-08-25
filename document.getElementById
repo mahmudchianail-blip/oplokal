@@ -1635,6 +1635,8 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium mb-2">Buchungskonto *</label>
+                            <!-- Suchfeld für schnellere Kontoauswahl -->
+                            <input type="text" id="booking-konto-search" class="form-input mb-2" placeholder="Konto suchen...">
                             <select id="booking-konto" class="form-select" required>
                                 <option value="">Konto auswählen...</option>
                             </select>
@@ -2291,7 +2293,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.14.10';
+        const APP_VERSION = '0.02.14.11';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -3678,6 +3680,19 @@
                 const bookingAccountSelect = document.getElementById('booking-konto');
                 if (bookingAccountSelect && konten.length > 0) {
                     populateAccountSelect(bookingAccountSelect, konten, true);
+
+                    // Suche zur schnellen Filterung der Konten
+                    const accountSearch = document.getElementById('booking-konto-search');
+                    if (accountSearch) {
+                        accountSearch.addEventListener('input', () => {
+                            const term = accountSearch.value.toLowerCase();
+                            const filtered = konten.filter(k =>
+                                k.nummer.toString().includes(term) ||
+                                k.name.toLowerCase().includes(term)
+                            );
+                            populateAccountSelect(bookingAccountSelect, filtered, true);
+                        });
+                    }
                 }
                 
                 // Für Buchungen-Filter
