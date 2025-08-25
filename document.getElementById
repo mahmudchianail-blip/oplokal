@@ -671,8 +671,7 @@
                                     <i data-lucide="book-open" class="h-4 w-4 text-blue-600"></i>
                                     <span class="text-gray-600">Konten im System:</span>
                                 </div>
-                                <span class="text-2xl font-bold text-blue-600">104</span>
-                            </div>
+                                <span id="system-konten-count" class="text-2xl font-bold text-blue-600">0</span>                            </div>
                             
                             <div class="space-y-2">
                                 <div class="flex items-center gap-2">
@@ -941,19 +940,19 @@
                 
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-8 mt-8">
                     <div class="text-center">
-                        <div class="text-3xl font-bold mb-1">104</div>
+                        <div id="konto-count-total" class="text-3xl font-bold mb-1">0</div>
                         <div class="text-sm opacity-90">Gesamt Konten</div>
                     </div>
                     <div class="text-center">
-                        <div class="text-3xl font-bold mb-1">14</div>
+                        <div id="konto-count-ertrag" class="text-3xl font-bold mb-1">0</div>
                         <div class="text-sm opacity-90">Ertragskonten</div>
                     </div>
                     <div class="text-center">
-                        <div class="text-3xl font-bold mb-1">53</div>
+                        <div id="konto-count-aufwand" class="text-3xl font-bold mb-1">0</div>
                         <div class="text-sm opacity-90">Aufwandskonten</div>
                     </div>
                     <div class="text-center">
-                        <div class="text-3xl font-bold mb-1">28</div>
+                        <div id="konto-count-bilanz" class="text-3xl font-bold mb-1">0</div>
                         <div class="text-sm opacity-90">Bilanzkonten</div>
                     </div>
                 </div>
@@ -2249,7 +2248,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.14.07';
+        const APP_VERSION = '0.02.14.08';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -2506,7 +2505,6 @@
                     { nummer: 2100, name: "Gewinnvortrag", typ: "Passiv", kategorie: "Eigenkapital", aktiv: true },
                     { nummer: 2200, name: "Verlustvortrag", typ: "Passiv", kategorie: "Eigenkapital", aktiv: true },
                     { nummer: 3300, name: "Verbindlichkeiten aus Lieferungen und Leistungen", typ: "Passiv", kategorie: "Fremdkapital", aktiv: true },
-                    { nummer: 3400, name: "Nachlässe auf Wareneinkäufe", typ: "Ertrag", kategorie: "Erträge", aktiv: true },
                     
                     // Ertragskonten
                     { nummer: 4000, name: "Umsatzerlöse 19%", typ: "Ertrag", kategorie: "Erträge", aktiv: true },
@@ -2518,6 +2516,7 @@
                     // Aufwandskonten - Wareneinsatz
                     { nummer: 3200, name: "Wareneinkauf 19%", typ: "Aufwand", kategorie: "Aufwendungen", aktiv: true },
                     { nummer: 3207, name: "Wareneinkauf 7%", typ: "Aufwand", kategorie: "Aufwendungen", aktiv: true },
+                    { nummer: 3400, name: "Nachlässe auf Wareneinkäufe", typ: "Aufwand", kategorie: "Aufwendungen", aktiv: true },
                     
                     // Aufwandskonten - Personalkosten
                     { nummer: 6000, name: "Löhne und Gehälter", typ: "Aufwand", kategorie: "Aufwendungen", aktiv: true },
@@ -5539,6 +5538,19 @@
             }
             
             kontenContainer.innerHTML = html;
+
+            // Update summary counters
+            const totalEl = document.getElementById('konto-count-total');
+            if (totalEl) totalEl.textContent = konten.length;
+            const ertragEl = document.getElementById('konto-count-ertrag');
+            if (ertragEl) ertragEl.textContent = ertragskonten.length;
+            const aufwandEl = document.getElementById('konto-count-aufwand');
+            if (aufwandEl) aufwandEl.textContent = aufwandskonten.length;
+            const bilanzEl = document.getElementById('konto-count-bilanz');
+            if (bilanzEl) bilanzEl.textContent = aktivkonten.length + passivkonten.length;
+            const systemCountEl = document.getElementById('system-konten-count');
+            if (systemCountEl) systemCountEl.textContent = konten.length;
+
             
             console.log('Konten loaded:', {
                 total: konten.length,
@@ -5580,13 +5592,11 @@
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button onclick="editKonto(${konto.nummer})" class="btn btn-sm bg-blue-600 text-white hover:bg-blue-700">
-                            <i data-lucide="edit" class="h-3 w-3"></i>
-                            Bearbeiten
+                        <button onclick="editKonto(${konto.nummer})" class="p-2 rounded-full text-blue-600 hover:bg-blue-50" title="Konto bearbeiten" aria-label="Konto bearbeiten">
+                            <i data-lucide="edit" class="h-4 w-4"></i>
                         </button>
-                        <button onclick="deleteKonto(${konto.nummer})" class="btn btn-sm bg-red-600 text-white hover:bg-red-700">
-                            <i data-lucide="trash-2" class="h-3 w-3"></i>
-                            Löschen
+                        <button onclick="deleteKonto(${konto.nummer})" class="p-2 rounded-full text-red-600 hover:bg-red-50" title="Konto löschen" aria-label="Konto löschen">
+                            <i data-lucide="trash-2" class="h-4 w-4"></i>
                         </button>
                     </div>
                 </div>
