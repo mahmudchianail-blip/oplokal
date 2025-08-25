@@ -1642,20 +1642,21 @@
                         
                         <div>
                             <label class="block text-sm font-medium mb-2">Kategorie</label>
-                            <select id="booking-kategorie" class="form-select">
-                                <option value="">Kategorie wählen (optional)</option>
-                                <option value="Beratung">Beratung</option>
-                                <option value="Dienstleistung">Dienstleistung</option>
-                                <option value="Wareneinkauf">Wareneinkauf</option>
-                                <option value="Warenverkauf">Warenverkauf</option>
-                                <option value="Marketing">Marketing</option>
-                                <option value="Büromaterial">Büromaterial</option>
-                                <option value="Reisekosten">Reisekosten</option>
-                                <option value="Software">Software</option>
-                                <option value="Miete">Miete</option>
-                                <option value="Versicherung">Versicherung</option>
-                                <option value="Sonstiges">Sonstiges</option>
-                            </select>
+                            <input type="text" id="booking-kategorie" class="form-input mb-2" list="booking-kategorie-options" placeholder="Kategorie suchen...">
+                            <datalist id="booking-kategorie-options">
+                                <option value="Beratung"></option>
+                                <option value="Dienstleistung"></option>
+                                <option value="Wareneinkauf"></option>
+                                <option value="Warenverkauf"></option>
+                                <option value="Marketing"></option>
+                                <option value="Büromaterial"></option>
+                                <option value="Reisekosten"></option>
+                                <option value="Software"></option>
+                                <option value="Miete"></option>
+                                <option value="Versicherung"></option>
+                                <option value="Sonstiges"></option>
+                            </datalist>
+                            <p class="text-xs text-gray-500 mt-1">Kategorie wählen (optional)</p>
                         </div>
                     </div>
                 </div>
@@ -2290,7 +2291,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.14.12';
+        const APP_VERSION = '0.02.14.13';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
