@@ -2308,7 +2308,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.14.17';
+        const APP_VERSION = '0.02.14.18';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -2791,6 +2791,7 @@
                 this.currentProduct = null;
                 this.isEditingProduct = false;
                 this.deleteCallback = null;
+                this.editingBuchungId = null;
             }
 
             async init() {
@@ -3016,6 +3017,10 @@
                                     <button onclick="openBuchungBeleg(this)" data-beleg="${buchung.beleg.data}" data-beleg-name="${buchung.beleg.name}" class="btn btn-sm bg-gray-200 text-gray-700 hover:bg-gray-300 mt-2 mr-2" title="Beleg ansehen">                                        <i data-lucide="file-text" class="h-3 w-3"></i>
                                     </button>
                                     ` : ''}
+                                    <button onclick="editBuchung('${buchung.id}')" class="btn btn-sm bg-blue-600 text-white hover:bg-blue-700 mt-2 mr-2" title="Buchung bearbeiten">
+                                        <i data-lucide="pencil" class="h-3 w-3"></i>
+                                        Bearbeiten
+                                    </button>
                                     <button onclick="deleteBuchung('${buchung.id}')" class="btn btn-sm bg-red-600 text-white hover:bg-red-700 mt-2" title="Buchung löschen">
                                         <i data-lucide="trash-2" class="h-3 w-3"></i>
                                         Löschen
@@ -3849,7 +3854,7 @@
             // Reset form
             document.getElementById('booking-form').reset();
             document.getElementById('invoice-validation').classList.add('hidden');
-            
+
             // Set current date
             document.getElementById('booking-datum').value = new Date().toISOString().split('T')[0];
             
@@ -3898,6 +3903,9 @@
             modal.classList.remove('active');
             document.getElementById('booking-form').reset();
             document.getElementById('invoice-validation').classList.add('hidden');
+            if (app) {
+                app.editingBuchungId = null;
+            }
         }
 
         function openProductModal(productId = null) {
@@ -4388,6 +4396,8 @@
             try {
                 const modal = document.getElementById('booking-modal');
                 const bookingType = app.currentBookingType || 'einnahme';
+                const editingId = app.editingBuchungId;
+                const existingBuchung = editingId ? await app.db.get('buchungen', editingId) : null;
                 
                 // Calculate net amount if not provided
                 if (!document.getElementById('booking-netto').value) {
@@ -4407,8 +4417,8 @@
                 });
                 
                 const formData = {
-                    id: app.db.generateUUID(),
-                    date: new Date().toISOString().split('T')[0],
+                    id: editingId || app.db.generateUUID(),
+                    date: existingBuchung?.date || new Date().toISOString().split('T')[0],
                     kundeName: document.getElementById('booking-kunde-name').value,
                     rechnungsnummer: document.getElementById('booking-rechnung-nummer').value,
                     beschreibung: document.getElementById('booking-beschreibung').value,
@@ -4418,6 +4428,7 @@
                     betrag_netto_cent: Math.round(nettoValue * 100),
                     mwst_satz: parseFloat(document.getElementById('booking-mwst').value),
                     mwst_betrag_cent: Math.round((bruttoValue - nettoValue) * 100),
+                    account: document.getElementById('booking-konto').value,
                     konto: parseInt(document.getElementById('booking-konto').value),
                     kategorie: document.getElementById('booking-kategorie').value,
                     notizen: document.getElementById('booking-notizen').value,
@@ -4483,13 +4494,21 @@
                         data: base64
                     };
                 }
+                if (!formData.beleg && existingBuchung?.beleg) {
+                    formData.beleg = existingBuchung.beleg;
+                }
 
                 console.log('Saving booking data:', formData);
                 
                 // Save booking
                 try {
-                    await app.db.add('buchungen', formData);
-                    console.log('✅ Booking saved successfully to IndexedDB');
+                    if (editingId) {
+                        await app.db.put('buchungen', formData);
+                        console.log('✅ Booking updated successfully in IndexedDB');
+                    } else {
+                        await app.db.add('buchungen', formData);
+                        console.log('✅ Booking saved successfully to IndexedDB');
+                    }
                 } catch (dbError) {
                     console.error('❌ Database save error:', dbError);
                     showNotification('Fehler beim Speichern in die Datenbank: ' + dbError.message, 'error');
@@ -4505,8 +4524,12 @@
                 // Close modal and show success
                 closeBookingModal();
                 
-                const typeText = bookingType === 'einnahme' ? 'Einnahme' : 'Ausgabe';
-                showNotification(`${typeText} erfolgreich gespeichert! ${formData.rechnungsnummer ? `(${formData.rechnungsnummer})` : ''}`, 'success');
+                if (editingId) {
+                    showNotification('Buchung aktualisiert', 'success');
+                } else {
+                    const typeText = bookingType === 'einnahme' ? 'Einnahme' : 'Ausgabe';
+                    showNotification(`${typeText} erfolgreich gespeichert! ${formData.rechnungsnummer ? `(${formData.rechnungsnummer})` : ''}`, 'success');
+                }
                 
             } catch (error) {
                 console.error('Error saving booking:', error);
@@ -4975,6 +4998,45 @@
             } catch (error) {
                 console.error('Error adjusting stock:', error);
                 showNotification('Fehler beim Anpassen des Bestands', 'error');
+            }
+        }
+        async function editBuchung(buchungId) {
+            try {
+                const buchung = await app.db.get('buchungen', buchungId);
+                if (!buchung) {
+                    showNotification('Buchung nicht gefunden', 'error');
+                    return;
+                }
+
+                app.editingBuchungId = buchungId;
+                openBookingModal(buchung.typ || 'einnahme');
+
+                document.getElementById('modal-title').textContent = 'Buchung bearbeiten';
+                document.getElementById('modal-subtitle').textContent = 'Bestehende Buchung anpassen';
+                const submitBtn = document.getElementById('booking-submit-btn');
+                submitBtn.innerHTML = '<i data-lucide="save" class="h-4 w-4"></i> Aktualisieren';
+                const icon = document.querySelector('#modal-icon i');
+                if (icon) {
+                    icon.setAttribute('data-lucide', 'pencil');
+                }
+
+                document.getElementById('booking-kunde-name').value = buchung.kundeName || '';
+                document.getElementById('booking-rechnung-nummer').value = buchung.rechnungsnummer || '';
+                document.getElementById('booking-beschreibung').value = buchung.beschreibung || '';
+                document.getElementById('booking-datum').value = buchung.datum || new Date().toISOString().split('T')[0];
+                document.getElementById('booking-betrag').value = (buchung.betrag_brutto_cent / 100).toFixed(2);
+                document.getElementById('booking-netto').value = (buchung.betrag_netto_cent / 100).toFixed(2);
+                document.getElementById('booking-mwst').value = buchung.mwst_satz || 19;
+                document.getElementById('booking-konto').value = buchung.account || buchung.konto || '';
+                document.getElementById('booking-kategorie').value = buchung.kategorie || '';
+                document.getElementById('booking-notizen').value = buchung.notizen || '';
+
+                if (typeof lucide !== 'undefined' && lucide.createIcons) {
+                    lucide.createIcons();
+                }
+            } catch (error) {
+                console.error('Error editing booking:', error);
+                showNotification('Fehler beim Laden der Buchung', 'error');
             }
         }
 
