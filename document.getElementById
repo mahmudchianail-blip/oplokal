@@ -1763,7 +1763,8 @@
                         <label class="block text-sm font-medium mb-2">Varianten</label>
                         <div id="product-varianten-list" class="space-y-2 mb-2"></div>
                         <div class="flex gap-2">
-                            <input type="text" id="product-variant-input" class="form-input flex-grow" placeholder="Neue Variante">
+                            <input type="text" id="product-variant-name" class="form-input flex-grow" placeholder="Variante">
+                            <input type="number" id="product-variant-stock" class="form-input w-24" placeholder="Bestand" min="0">
                             <button type="button" onclick="addVariant()" class="btn btn-sm bg-blue-600 text-white hover:bg-blue-700">Hinzufügen</button>
                         </div>
                     </div>
@@ -2316,7 +2317,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.14.19';
+        const APP_VERSION = '0.02.15.0';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -3126,7 +3127,7 @@
                     const stockIcon = lowStock ? 'alert-triangle' : 'check-circle';
 
                     html += `
-                        <div class="card p-6 hover:shadow-lg transition-shadow">
+                        <div class="card p-6 hover:shadow-lg transition-shadow ware-card">
                             <div class="flex justify-between items-start mb-4">
                                 <div class="flex-1">
                                     <div class="flex items-center gap-2 mb-2">
@@ -3171,7 +3172,10 @@
                             <details class="mt-2">
                                 <summary class="cursor-pointer text-sm text-gray-600">Varianten (${ware.varianten.length})</summary>
                                 <div class="mt-2 flex flex-wrap gap-2">
-                                    ${ware.varianten.map(v => `<span class='px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800'>${v}</span>`).join('')}
+                                    ${ware.varianten.map(v => {
+                                        const low = (v.stock || 0) <= (ware.mindestbestand || 0);
+                                        return `<span class='px-2 py-1 text-xs rounded-full ${low ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}'>${v.name}: ${v.stock || 0} Stk.</span>`;
+                                    }).join('')}
                                 </div>
                             </details>
                             ` : ''}
@@ -3201,6 +3205,14 @@
 
                 container.innerHTML = html;
                 
+                container.querySelectorAll('.ware-card').forEach(card => {
+                    card.addEventListener('click', e => {
+                        if (e.target.closest('button')) return;
+                        const details = card.querySelector('details');
+                        if (details) details.open = !details.open;
+                    });
+                });
+
                 // Initialize icons
                 if (typeof lucide !== 'undefined' && lucide.createIcons) {
                     lucide.createIcons();
@@ -3963,7 +3975,9 @@
                     document.getElementById('product-bestand').value = product.bestand || 0;
                     document.getElementById('product-mindestbestand').value = product.mindestbestand || 5;
                     document.getElementById('product-lieferant').value = product.lieferant || '';
-                    currentVariants = product.varianten || [];
+                    currentVariants = (product.varianten || []).map(v =>
+                        typeof v === 'string' ? { name: v, stock: 0 } : v
+                    );
                     renderVariantList();
                     calculateProductPrice();
                 }).catch(error => {
@@ -3990,11 +4004,14 @@
             if (firstField) firstField.focus();
         }
         function addVariant() {
-            const input = document.getElementById('product-variant-input');
-            const value = input.value.trim();
-            if (value) {
-                currentVariants.push(value);
-                input.value = '';
+            const nameInput = document.getElementById('product-variant-name');
+            const stockInput = document.getElementById('product-variant-stock');
+            const name = nameInput.value.trim();
+            const stock = parseInt(stockInput.value) || 0;
+            if (name) {
+                currentVariants.push({ name, stock });
+                nameInput.value = '';
+                stockInput.value = '';
                 renderVariantList();
             }
         }
@@ -4009,10 +4026,13 @@
             if (!list) return;
             list.innerHTML = currentVariants.map((v, i) => `
                 <div class="flex items-center gap-2">
-                    <span class="px-2 py-1 bg-gray-100 rounded text-sm">${v}</span>
+                    <span class="px-2 py-1 bg-gray-100 rounded text-sm">${v.name} – ${v.stock} Stk.</span>
                     <button type="button" class="text-red-500 hover:text-red-700 text-xs" onclick="removeVariant(${i})">&times;</button>
                 </div>
             `).join('');
+            const total = currentVariants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0);
+            const stockInput = document.getElementById('product-bestand');
+            if (stockInput) stockInput.value = total;
         }
         function closeProductModal() {
             const modal = document.getElementById('product-modal');
@@ -4648,7 +4668,9 @@
             try {
                 const nettoPreis = parseFloat(document.getElementById('product-preis-netto').value);
                 const mwstSatz = parseInt(document.getElementById('product-mwst-satz').value);
-                
+
+                const variantTotal = currentVariants.reduce((sum, v) => sum + (parseInt(v.stock) || 0), 0);
+                const inputStock = parseInt(document.getElementById('product-bestand').value) || 0;
                 const wareData = {
                     name: document.getElementById('product-name').value,
                     artikelnummer: document.getElementById('product-artikelnummer').value || null,
