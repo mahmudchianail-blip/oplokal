@@ -1759,6 +1759,14 @@
                         <label class="block text-sm font-medium mb-2">Lieferant</label>
                         <input type="text" id="product-lieferant" class="form-input" placeholder="Name des Lieferanten">
                     </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Varianten</label>
+                        <div id="product-varianten-list" class="space-y-2 mb-2"></div>
+                        <div class="flex gap-2">
+                            <input type="text" id="product-variant-input" class="form-input flex-grow" placeholder="Neue Variante">
+                            <button type="button" onclick="addVariant()" class="btn btn-sm bg-blue-600 text-white hover:bg-blue-700">Hinzufügen</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="flex justify-end space-x-4 mt-6">
                     <button type="button" onclick="closeProductModal()" class="btn btn-secondary">Abbrechen</button>
@@ -2308,7 +2316,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.14.18';
+        const APP_VERSION = '0.02.14.19';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -3159,6 +3167,15 @@
                                 </div>
                             </div>
 
+                            ${ware.varianten && ware.varianten.length ? `
+                            <details class="mt-2">
+                                <summary class="cursor-pointer text-sm text-gray-600">Varianten (${ware.varianten.length})</summary>
+                                <div class="mt-2 flex flex-wrap gap-2">
+                                    ${ware.varianten.map(v => `<span class='px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800'>${v}</span>`).join('')}
+                                </div>
+                            </details>
+                            ` : ''}
+
                             <!-- Action Buttons -->
                             <div class="flex gap-2 pt-4 border-t border-gray-100">
                                 <button onclick="editProduct('${ware.id}')" class="btn btn-sm bg-blue-600 text-white hover:bg-blue-700">
@@ -3908,8 +3925,10 @@
             }
         }
 
+        let currentVariants = [];
+
         function openProductModal(productId = null) {
-                        if (!app) {
+            if (!app) {
                 console.warn('App not initialized yet, please wait...');
                 showNotification('System wird noch geladen, bitte warten...', 'warning');
                 return;
@@ -3944,7 +3963,8 @@
                     document.getElementById('product-bestand').value = product.bestand || 0;
                     document.getElementById('product-mindestbestand').value = product.mindestbestand || 5;
                     document.getElementById('product-lieferant').value = product.lieferant || '';
-                    
+                    currentVariants = product.varianten || [];
+                    renderVariantList();
                     calculateProductPrice();
                 }).catch(error => {
                     console.error('Error loading product:', error);
@@ -3958,6 +3978,8 @@
                 submitBtn.textContent = 'Speichern';
                 document.getElementById('product-form').reset();
                 document.getElementById('product-bestand').value = '0';
+                currentVariants = [];
+                renderVariantList();
                 document.getElementById('product-mindestbestand').value = '5';
                 document.getElementById('product-mwst-satz').value = '19';
                 calculateProductPrice();
@@ -3967,15 +3989,41 @@
             const firstField = document.getElementById('product-name');
             if (firstField) firstField.focus();
         }
+        function addVariant() {
+            const input = document.getElementById('product-variant-input');
+            const value = input.value.trim();
+            if (value) {
+                currentVariants.push(value);
+                input.value = '';
+                renderVariantList();
+            }
+        }
 
+        function removeVariant(index) {
+            currentVariants.splice(index, 1);
+            renderVariantList();
+        }
+
+        function renderVariantList() {
+            const list = document.getElementById('product-varianten-list');
+            if (!list) return;
+            list.innerHTML = currentVariants.map((v, i) => `
+                <div class="flex items-center gap-2">
+                    <span class="px-2 py-1 bg-gray-100 rounded text-sm">${v}</span>
+                    <button type="button" class="text-red-500 hover:text-red-700 text-xs" onclick="removeVariant(${i})">&times;</button>
+                </div>
+            `).join('');
+        }
         function closeProductModal() {
-                        const modal = document.getElementById('product-modal');
+            const modal = document.getElementById('product-modal');
             modal.classList.remove('active');
             const form = document.getElementById('product-form');
             if (form) {
                 form.reset();
                 if (typeof calculateProductPrice === 'function') calculateProductPrice();
             }
+            currentVariants = [];
+            renderVariantList();
             app.isEditingProduct = false;
             app.currentProduct = null;
         }
@@ -4613,6 +4661,7 @@
                     mwst_satz: mwstSatz,
                     bestand: parseInt(document.getElementById('product-bestand').value) || 0,
                     mindestbestand: parseInt(document.getElementById('product-mindestbestand').value) || 5,
+                    varianten: currentVariants,
                     aktiv: true
                 };
                 
