@@ -2078,7 +2078,7 @@
                     
                     <div class="md:col-span-2">
                         <label class="flex items-center">
-                            <input type="checkbox" id="warenausgang-auto-booking" class="form-checkbox">
+                            <input type="checkbox" id="warenausgang-auto-booking" class="form-checkbox" checked>
                             <span class="ml-2 text-sm">Automatische Buchung erstellen (Warenverkauf/Ausgang)</span>
                         </label>
                     </div>
@@ -2317,7 +2317,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.15.0';
+        const APP_VERSION = '0.02.15.02';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -5162,10 +5162,15 @@
                 document.body.removeChild(link);
 
                 setTimeout(() => URL.revokeObjectURL(url), 1000);
-            } catch (error) {
-                console.error('Error opening attachment:', error);
-                showNotification('Fehler beim Öffnen des Belegs', 'error');
-            }
+        } catch (error) {
+            console.error('Error opening attachment:', error);
+            showNotification('Fehler beim Öffnen des Belegs', 'error');
+        }
+    }
+
+        function parseNumber(value) {
+            const parsed = parseFloat(String(value).replace(',', '.'));
+            return isNaN(parsed) ? 0 : parsed;
         }
 
         // Automatic calculation functions for Wareneingang
@@ -5192,7 +5197,7 @@
         // Automatic calculation functions for Warenausgang
         function calculateWarenausgangTotals() {
             const quantity = parseFloat(document.getElementById('warenausgang-quantity').value) || 0;
-            const unitPrice = parseFloat(document.getElementById('warenausgang-price').value) || 0;
+            const unitPrice = parseNumber(document.getElementById('warenausgang-price').value);
             
             if (quantity > 0 && unitPrice > 0) {
                 const total = quantity * unitPrice;
@@ -5202,7 +5207,7 @@
         
         function calculateWarenausgangFromTotal() {
             const quantity = parseFloat(document.getElementById('warenausgang-quantity').value) || 0;
-            const totalPrice = parseFloat(document.getElementById('warenausgang-total').value) || 0;
+            const totalPrice = parseNumber(document.getElementById('warenausgang-total').value);
             
             if (quantity > 0 && totalPrice > 0) {
                 const unitPrice = totalPrice / quantity;
@@ -5247,7 +5252,8 @@
             
             // Reset form
             form.reset();
-            
+            document.getElementById('warenausgang-auto-booking').checked = true;
+
             // Load products
             app.loadProductFilters();
             
@@ -5481,8 +5487,8 @@
             try {
                 const productId = document.getElementById('warenausgang-product').value;
                 const quantity = parseInt(document.getElementById('warenausgang-quantity').value);
-                let price = parseFloat(document.getElementById('warenausgang-price').value) || 0;
-                const totalPrice = parseFloat(document.getElementById('warenausgang-total').value) || 0;
+                let price = parseNumber(document.getElementById('warenausgang-price').value);
+                const totalPrice = parseNumber(document.getElementById('warenausgang-total').value);
                 const customer = document.getElementById('warenausgang-customer').value;
                 const reference = document.getElementById('warenausgang-reference').value;
                 const reason = document.getElementById('warenausgang-reason').value;
