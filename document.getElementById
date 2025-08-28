@@ -2317,7 +2317,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.15.02';
+        const APP_VERSION = '0.02.15.03';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -5449,16 +5449,7 @@
                 await app.db.add('lagerbewegungen', movement);
                 console.log('Movement saved successfully');
                 
-                // Create automatic booking if requested
-                if (autoBooking && price > 0) {
-                    try {
-                        await createWareneingangBooking(movement, product);
-                        console.log('Automatic booking created');
-                    } catch (bookingError) {
-                        console.warn('Failed to create automatic booking:', bookingError);
-                        // Don't fail the entire operation if booking fails
-                    }
-                }
+                // Automatic booking for Wareneingang removed
                 
                 // Refresh data
                 await app.loadWaren();
@@ -5469,10 +5460,7 @@
                 
                 closeWareneingangModal();
                 
-                const message = autoBooking && price > 0 ? 
-                    'Wareneingang erfasst und Buchung erstellt!' : 
-                    'Wareneingang erfolgreich erfasst!';
-                showNotification(message, 'success');
+                showNotification('Wareneingang erfolgreich erfasst!', 'success');
                 
             } catch (error) {
                 console.error('Error saving wareneingang:', error);
@@ -5618,40 +5606,7 @@
             }
         }
 
-        // Create automatic booking for Wareneingang
-        async function createWareneingangBooking(movement, product) {
-            try {
-                // Find appropriate accounts (Wareneinkauf = 6000, Kasse = 1000)
-                const konten = await app.db.getAll('konten');
-                const wareneinkaufKonto = konten.find(k => k.nummer === 6000) || konten.find(k => k.typ === 'Aufwand');
-                const kasseKonto = konten.find(k => k.nummer === 1000) || konten.find(k => k.typ === 'Aktiv');
-                
-                if (!wareneinkaufKonto || !kasseKonto) {
-                    console.warn('Could not find appropriate accounts for automatic booking');
-                    return;
-                }
-                
-                const booking = {
-                    id: app.db.generateUUID(),
-                    date: new Date().toISOString().split('T')[0],
-                    beschreibung: `Wareneinkauf: ${product.name} (${movement.quantity} Stk)`,
-                    betrag: movement.totalValue,
-                    typ: 'ausgabe', // Expense for purchase
-                    konto: wareneinkaufKonto.nummer,
-                    mwst: 19, // Default VAT
-                    netto: movement.totalValue / 1.19,
-                    mwstBetrag: movement.totalValue - (movement.totalValue / 1.19),
-                    kategorie: 'Wareneinkauf',
-                    notizen: `Auto-Buchung für Bewegung: ${movement.id}`,
-                    timestamp: new Date().toISOString()
-                };
-                
-                await app.db.add('buchungen', booking);
-                
-            } catch (error) {
-                console.error('Error creating wareneingang booking:', error);
-            }
-        }
+        // Automatic booking for Wareneingang removed
 
         // Create automatic booking for Warenausgang
         async function createWarenausgangBooking(movement, product) {
@@ -5664,19 +5619,29 @@
                     console.warn('Could not find appropriate accounts for automatic booking');
                     return;
                 }
-                
+
+                const bruttoCent = Math.round(movement.totalValue * 100);
+                const nettoCent = Math.round((movement.totalValue / 1.19) * 100);
+                const mwstCent = bruttoCent - nettoCent;
+
                 const booking = {
                     id: app.db.generateUUID(),
+                    date: new Date().toISOString().split('T')[0],
+                    datum: new Date().toISOString().split('T')[0],
                     beschreibung: `Warenausgang: ${product.name} (${movement.quantity} Stk)`,
-                    betrag: movement.totalValue,
                     typ: 'ausgabe',
-                    konto: warenausgangKonto.nummer,
-                    mwst: 19,
-                    netto: movement.totalValue / 1.19,
+                    account: warenausgangKonto.nummer,
+                    mwst_satz: 19,
+                    betrag_brutto_cent: bruttoCent,
+                    betrag_netto_cent: nettoCent,
+                    mwst_betrag_cent: mwstCent,
+                    betrag: movement.totalValue,
+                    amount: movement.totalValue,
                     mwstBetrag: movement.totalValue - (movement.totalValue / 1.19),
                     kategorie: 'Warenausgang',
                     notizen: `Auto-Buchung für Bewegung: ${movement.id}`,
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
+                    type: 'ausgabe'
                 };
                 
                 await app.db.add('buchungen', booking);
