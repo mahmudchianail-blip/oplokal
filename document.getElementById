@@ -1990,6 +1990,11 @@
                     </div>
                     
                     <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-2">Rechnung (PDF)</label>
+                        <input type="file" id="wareneingang-beleg" class="form-input" accept="application/pdf">
+                    </div>
+
+                    <div class="md:col-span-2">
                         <label class="block text-sm font-medium mb-2">Notizen</label>
                         <textarea id="wareneingang-notes" class="form-input" rows="3" placeholder="Zusätzliche Informationen..."></textarea>
                     </div>
@@ -2317,7 +2322,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.15.03';
+        const APP_VERSION = '0.02.15.04';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -5357,7 +5362,23 @@
                 const reference = document.getElementById('wareneingang-reference').value;
                 const notes = document.getElementById('wareneingang-notes').value;
                 const autoBooking = document.getElementById('wareneingang-auto-booking').checked;
-                
+                                const belegInput = document.getElementById('wareneingang-beleg');
+                let beleg = null;
+                if (belegInput.files && belegInput.files[0]) {
+                    const file = belegInput.files[0];
+                    const base64 = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(reader.result);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(file);
+                    });
+                    beleg = {
+                        name: file.name,
+                        type: file.type,
+                        data: base64
+                    };
+                }
+
                 console.log('Wareneingang data:', { productId, quantity, price, totalPrice, supplier, reference, notes, autoBooking });
                 
                 // Validation
@@ -5435,6 +5456,7 @@
                     supplier: supplier || '', // For compatibility
                     reference: reference || '', // For compatibility
                     notes: notes || '', // For compatibility
+                    beleg: beleg,
                     userId: app.currentUser?.id,
                     userName: app.currentUser?.name,
                     userKuerzel: app.currentUser?.kuerzel,
@@ -8452,6 +8474,20 @@ Optispar Buchhaltungssystem
                             console.warn('Fehler beim Hinzufügen eines Belegs:', e);
                         }
                         
+                    }
+                }
+
+                // Add Wareneingang PDFs
+                const wareneingangFolder = zip.folder('Wareneingang');
+                for (const m of filteredBewegungen) {
+                    if (m.typ === 'eingang' && m.beleg && m.beleg.data) {
+                        try {
+                            const pdfBytes = base64ToUint8Array(m.beleg.data.split(',')[1]);
+                            const pdfName = m.beleg.name || 'Wareneingang.pdf';
+                            wareneingangFolder.file(pdfName, pdfBytes);
+                        } catch (e) {
+                            console.warn('Fehler beim Hinzufügen eines Wareneingang-Belegs:', e);
+                        }
                     }
                 }
 
