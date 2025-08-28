@@ -1979,6 +1979,11 @@
                         <div class="text-xs text-gray-500 mt-1">Wird automatisch berechnet oder kann manuell eingegeben werden</div>
                     </div>
                     
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Datum *</label>
+                        <input type="date" id="wareneingang-date" class="form-input" required>
+                    </div>
+
                     <div class="md:col-span-2">
                         <label class="block text-sm font-medium mb-2">Lieferant</label>
                         <input type="text" id="wareneingang-supplier" class="form-input" placeholder="Name des Lieferanten">
@@ -2322,7 +2327,7 @@
         let isAdmin = false;
         let autoLogoutMinutes = 30;
         const SESSION_KEY = 'oplokal_session';
-        const APP_VERSION = '0.02.15.04';
+        const APP_VERSION = '0.02.15.05';
 
         function getStoredTimeout(email) {
             const val = localStorage.getItem(`autoLogoutMinutes_${email}`);
@@ -5360,12 +5365,17 @@
                 const totalPrice = parseFloat(document.getElementById('wareneingang-total').value) || 0;
                 const supplier = document.getElementById('wareneingang-supplier').value;
                 const reference = document.getElementById('wareneingang-reference').value;
+                const date = document.getElementById('wareneingang-date').value;
                 const notes = document.getElementById('wareneingang-notes').value;
-                const autoBooking = document.getElementById('wareneingang-auto-booking').checked;
+                const belegInput = document.getElementById('wareneingang-beleg');
                                 const belegInput = document.getElementById('wareneingang-beleg');
                 let beleg = null;
                 if (belegInput.files && belegInput.files[0]) {
                     const file = belegInput.files[0];
+                    const referenceTrimmed = reference ? reference.trim() : 'Wareneingang';
+                    const dateStr = date || new Date().toISOString().split('T')[0];
+                    const safeReference = referenceTrimmed.replace(/[^a-zA-Z0-9_-]/g, '_');
+                    const newFileName = `${safeReference}-${dateStr}.pdf`;
                     const base64 = await new Promise((resolve, reject) => {
                         const reader = new FileReader();
                         reader.onload = () => resolve(reader.result);
@@ -5373,13 +5383,13 @@
                         reader.readAsDataURL(file);
                     });
                     beleg = {
-                        name: file.name,
+                        name: newFileName,
                         type: file.type,
                         data: base64
                     };
                 }
 
-                console.log('Wareneingang data:', { productId, quantity, price, totalPrice, supplier, reference, notes, autoBooking });
+                console.log('Wareneingang data:', { productId, quantity, price, totalPrice, supplier, reference, date, notes, autoBooking });
                 
                 // Validation
                 if (!productId) {
@@ -5392,6 +5402,10 @@
                     return;
                 }
                 
+                if (!date) {
+                    showNotification('Bitte Datum eingeben!', 'error');
+                    return;
+                }
                 // Use total price to calculate unit price if no unit price provided
                 if (!price && totalPrice && quantity > 0) {
                     price = totalPrice / quantity;
@@ -5460,7 +5474,7 @@
                     userId: app.currentUser?.id,
                     userName: app.currentUser?.name,
                     userKuerzel: app.currentUser?.kuerzel,
-                    datum: new Date().toISOString().split('T')[0],
+                    datum: date,
                     timestamp: new Date().toISOString(),
                     automatischeBuchung: autoBooking
                 };
