@@ -1,0 +1,1847 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optispar - Komplette Standalone Buchhaltung</title>
+    
+    <!-- External Dependencies -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    
+    
+</head>
+<body class="bg-gray-50">
+    <!-- Simple Login Modal -->
+    <div id="loginModal" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center">
+        <div class="bg-white p-6 rounded-lg shadow-lg w-80">
+            <h2 class="text-xl font-semibold mb-4">Login</h2>
+            <input id="email" type="email" placeholder="E-Mail" class="form-input mb-2" />
+            <input id="password" type="password" placeholder="Passwort" class="form-input mb-4" />
+            <button id="loginBtn" class="btn btn-blue w-full">Anmelden</button>
+        </div>
+    </div>
+
+ <div id="app" class="hidden">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b">
+        <div class="container px-4 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white;">
+                        <i data-lucide="trending-up" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">Optispar</h1>
+                        <span class="text-sm text-gray-500">Intelligente Buchhaltung & Lagerverwaltung</span>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button class="btn btn-red" onclick="openBookingModal('ausgabe')">
+                        <i data-lucide="minus-circle" class="h-4 w-4"></i>
+                        Ausgabe buchen
+                    </button>
+                    <button class="btn btn-green" onclick="openBookingModal('einnahme')">
+                        <i data-lucide="plus-circle" class="h-4 w-4"></i>
+                        Einnahme buchen
+                    </button>
+                    <button class="btn btn-blue" onclick="openUserListModal()" data-admin-only>
+                        <i data-lucide="users" class="h-4 w-4"></i>
+                        Nutzer verwalten
+                    </button>
+                    <button class="btn btn-blue" onclick="openUserModal()" data-admin-only>
+                        <i data-lucide="user-plus" class="h-4 w-4"></i>
+                        Nutzer anlegen
+                    </button>
+                    <button class="btn btn-secondary" onclick="openSettingsModal()">
+                        <i data-lucide="settings" class="h-4 w-4"></i>
+                        Einstellungen
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="bg-white border-b">
+        <div class="container px-4">
+            <div class="flex space-x-0">
+                <button class="tab-button active" onclick="switchTab('dashboard')" id="tab-dashboard">
+                    <i data-lucide="layout-dashboard" class="h-4 w-4"></i>
+                    Dashboard
+                </button>
+                <button class="tab-button" onclick="switchTab('buchungen')" id="tab-buchungen">
+                    <i data-lucide="receipt" class="h-4 w-4"></i>
+                    Buchungen
+                </button>
+                <button class="tab-button" onclick="switchTab('lager')" id="tab-lager">
+                    <i data-lucide="package" class="h-4 w-4"></i>
+                    Lager
+                </button>
+                <button class="tab-button" onclick="switchTab('bewegungen')" id="tab-bewegungen">
+                    <i data-lucide="truck" class="h-4 w-4"></i>
+                    Bewegungen
+                </button>
+                <button class="tab-button" onclick="switchTab('konten')" id="tab-konten">
+                    <i data-lucide="book-open" class="h-4 w-4"></i>
+                    Konten
+                </button>
+                <button class="tab-button" onclick="switchTab('berichte')" id="tab-berichte">
+                    <i data-lucide="bar-chart-3" class="h-4 w-4"></i>
+                    Berichte
+                </button>
+                <button class="tab-button" onclick="switchTab('bestellungen')" id="tab-bestellungen">
+                    <i data-lucide="shopping-cart" class="h-4 w-4"></i>
+                    Bestellungen
+                </button>
+                <button class="tab-button" onclick="switchTab('admin')" id="tab-admin" data-admin-only>
+                    <i data-lucide="user" class="h-4 w-4"></i>
+                    Admin
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container px-4 py-6">
+        
+        <!-- Dashboard Tab -->
+        <div id="content-dashboard" class="tab-content active">
+            <div class="space-y-6">
+                <!-- Search Bar -->
+                <div class="relative">
+                    <i data-lucide="search" class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4"></i>
+                    <input type="text" class="form-input pl-10" placeholder="🔍 Intelligente Suche - Buchungen, Kunden, Produkte...">
+                </div>
+
+                <!-- Main KPI Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Umsatz Monat -->
+                    <div class="card p-6" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white;">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="flex items-center gap-2 mb-2">
+                                    <i data-lucide="trending-up" class="h-5 w-5"></i>
+                                    <span class="text-sm opacity-90">Umsatz Monat</span>
+                                </div>
+                                <p class="text-3xl font-bold" id="kpi-umsatz-monat">€ 0,00</p>
+                                <p class="text-xs opacity-80 mt-1">✅ Aktueller Monat</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Umsatz Jahr -->
+                    <div class="card p-6" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white;">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="flex items-center gap-2 mb-2">
+                                    <i data-lucide="trending-up" class="h-5 w-5"></i>
+                                    <span class="text-sm opacity-90">Umsatz Jahr 2025</span>
+                                </div>
+                                <p class="text-3xl font-bold" id="kpi-umsatz-jahr">€ 0,00</p>
+                                <p class="text-xs opacity-80 mt-1">🔴 Jahresumsatz</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Kosten Monat -->
+                    <div class="card p-6" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white;">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="flex items-center gap-2 mb-2">
+                                    <i data-lucide="credit-card" class="h-5 w-5"></i>
+                                    <span class="text-sm opacity-90">Kosten Monat</span>
+                                </div>
+                                <p class="text-3xl font-bold" id="kpi-kosten-monat">€ 0,00</p>
+                                <p class="text-xs opacity-80 mt-1">🟡 Laufende Kosten</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Secondary KPIs -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <!-- Gewinn Monat -->
+                    <div class="card p-4" style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white;">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i data-lucide="trending-up" class="h-4 w-4"></i>
+                            <span class="text-sm">Gewinn Monat</span>
+                        </div>
+                        <p class="text-xl font-bold" id="kpi-gewinn-monat">€ 0,00</p>
+                        <p class="text-xs opacity-80">✅ Neutral</p>
+                    </div>
+
+                    <!-- Gewinn Jahr -->
+                    <div class="card p-4" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white;">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i data-lucide="trending-down" class="h-4 w-4"></i>
+                            <span class="text-sm">Gewinn Jahr</span>
+                        </div>
+                        <p class="text-xl font-bold" id="kpi-gewinn-jahr">€ 0,00</p>
+                    </div>
+
+                    <!-- Offene Rechnungen -->
+                    <div class="card p-4" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white;">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i data-lucide="file-text" class="h-4 w-4"></i>
+                            <span class="text-sm">Offene Rechnungen</span>
+                        </div>
+                        <p class="text-xl font-bold" id="kpi-offene-rechnungen">0</p>
+                    </div>
+
+                    <!-- Kosten Jahr -->
+                    <div class="card p-4" style="background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); color: white;">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i data-lucide="credit-card" class="h-4 w-4"></i>
+                            <span class="text-sm">Kosten Jahr</span>
+                        </div>
+                        <p class="text-xl font-bold" id="kpi-kosten-jahr">€ 0,00</p>
+                    </div>
+                </div>
+
+                <!-- Bottom Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Schnellbuchungen -->
+                    <div class="card p-6">
+                        <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                            <i data-lucide="zap" class="h-5 w-5"></i>
+                            Schnellbuchungen
+                        </h3>
+                        
+                        <div class="space-y-3">
+                            <div class="p-4 bg-red-50 border-l-4 border-red-400 rounded">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <i data-lucide="minus-circle" class="h-4 w-4 text-red-600"></i>
+                                    <span class="font-semibold text-red-800">Ausgabe buchen</span>
+                                </div>
+                                <p class="text-sm text-red-700">Kosten und Ausgaben erfassen</p>
+                            </div>
+                            
+                            <div class="p-4 bg-green-50 border-l-4 border-green-400 rounded">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <i data-lucide="plus-circle" class="h-4 w-4 text-green-600"></i>
+                                    <span class="font-semibold text-green-800">Einnahme buchen</span>
+                                </div>
+                                <p class="text-sm text-green-700">Umsätze und Erlöse erfassen</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Systemübersicht -->
+                    <div class="card p-6">
+                        <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                            <i data-lucide="activity" class="h-5 w-5"></i>
+                            Systemübersicht
+                        </h3>
+                        
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                                <div class="flex items-center gap-2">
+                                    <i data-lucide="book-open" class="h-4 w-4 text-blue-600"></i>
+                                    <span class="text-gray-600">Konten im System:</span>
+                                </div>
+                                <span id="system-konten-count" class="text-2xl font-bold text-blue-600">0</span>                            </div>
+                            
+                            <div class="space-y-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="bg-blue-600 text-white px-2 py-1 rounded text-xs font-semibold">SKR03</span>
+                                    <span class="text-gray-600 text-sm">Kontenrahmen</span>
+                                </div>
+                                <div class="text-sm text-gray-600">
+                                    <strong class="text-gray-900">Buchungen heute:</strong> 
+                                    <span class="text-green-600 font-semibold" id="daily-booking-count">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Buchungen Tab -->
+        <div id="content-buchungen" class="tab-content">
+            <!-- Search and Filter Section -->
+            <div class="space-y-4 mb-6">
+                <!-- Search Bar -->
+                <div class="relative">
+                    <i data-lucide="search" class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4"></i>
+                    <input type="text" id="buchungen-search" placeholder="Suche nach Beschreibung, Betrag oder Konto..." class="form-input pl-10" onkeyup="filterBuchungen()">
+                </div>
+
+                <!-- Filter Options -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <!-- Typ Filter -->
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Typ</label>
+                        <select id="buchungen-typ-filter" class="form-input" onchange="filterBuchungen()">
+                            <option value="alle">Alle Buchungen</option>
+                            <option value="einnahme">Nur Einnahmen</option>
+                            <option value="ausgabe">Nur Ausgaben</option>
+                        </select>
+                    </div>
+
+                    <!-- Buchungskonto Filter -->
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Buchungskonto</label>
+                        <select id="buchungen-konto-filter" class="form-input" onchange="filterBuchungen()">
+                            <option value="alle">Alle Konten</option>
+                            <!-- Konten werden dynamisch geladen -->
+                        </select>
+                    </div>
+
+                    <!-- Zeitraum Filter -->
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Zeitraum</label>
+                        <select id="buchungen-zeitraum-filter" class="form-input" onchange="toggleBuchungenDateRange(); filterBuchungen();">
+                            <option value="alle">Alle Zeiträume</option>
+                            <option value="heute">Heute</option>
+                            <option value="diese-woche">Diese Woche</option>
+                            <option value="dieser-monat">Dieser Monat</option>
+                            <option value="dieses-jahr">Dieses Jahr</option>
+                            <option value="custom">Benutzerdefiniert</option>
+                        </select>
+                    </div>
+
+                    <!-- Reset Filter -->
+                    <div class="flex items-end">
+                        <button onclick="resetBuchungenFilter()" class="btn btn-secondary w-full">
+                            <i data-lucide="filter-x" class="h-4 w-4"></i>
+                            Filter zurücksetzen
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Custom Date Range -->
+                <div id="buchungen-custom-date-range" class="hidden">
+                    <div class="grid grid-cols-2 gap-4 max-w-md">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Von</label>
+                            <input type="date" id="buchungen-date-from" class="form-input" onchange="filterBuchungen()">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Bis</label>
+                            <input type="date" id="buchungen-date-to" class="form-input" onchange="filterBuchungen()">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold">Buchungen</h2>
+                    <div class="text-sm text-gray-500">
+                        <span id="buchungen-count">0</span> Buchungen gefunden
+                    </div>
+                </div>
+                <div id="buchungen-list" class="space-y-4">
+                    <div class="text-center py-12">
+                        <i data-lucide="receipt" class="h-16 w-16 text-gray-300 mx-auto mb-4"></i>
+                        <p class="text-gray-500">Noch keine Buchungen vorhanden.</p>
+                        <p class="text-sm text-gray-400 mt-2">Erstellen Sie Ihre erste Buchung mit den Buttons oben.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lager Tab -->
+        <div id="content-lager" class="tab-content">
+            <!-- Search Bar -->
+            <div class="mb-6">
+                <div class="relative">
+                    <i data-lucide="search" class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4"></i>
+                    <input type="text" class="form-input pl-10" placeholder="Suche nach Produktname, Kategorie oder Artikelnummer..." id="lager-search">
+                </div>
+            </div>
+
+            <div class="card p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-semibold">Lager & Waren</h2>
+                    <button class="btn btn-secondary" onclick="openProductModal()" id="btn-neues-produkt">
+                        <i data-lucide="plus" class="h-4 w-4"></i>
+                        Neues Produkt
+                    </button>
+                </div>
+                
+                <div id="products-list">
+                    <!-- Products will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Bewegungen Tab -->
+        <div id="content-bewegungen" class="tab-content">
+            <!-- Action Buttons -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div class="card p-6 bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-lg font-semibold text-green-800">Wareneingang</h3>
+                            <p class="text-green-600 text-sm">Neue Waren ins Lager einbuchen</p>
+                        </div>
+                        <button onclick="openWareneingangModal()" class="btn btn-green">
+                            <i data-lucide="package-plus" class="h-4 w-4"></i>
+                            Wareneingang
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="card p-6 bg-gradient-to-br from-red-50 to-rose-50 border-red-200">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-lg font-semibold text-red-800">Warenausgang</h3>
+                            <p class="text-red-600 text-sm">Waren aus dem Lager ausbuchen</p>
+                        </div>
+                        <button onclick="openWarenausgangModal()" class="btn btn-red">
+                            <i data-lucide="package-minus" class="h-4 w-4"></i>
+                            Warenausgang
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Section -->
+            <div class="card p-6 mb-6">
+                <h3 class="text-lg font-semibold mb-4">Filter & Suche</h3>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Bewegungstyp</label>
+                        <select id="bewegung-type-filter" class="form-select" onchange="filterBewegungen()">
+                            <option value="">Alle Bewegungen</option>
+                            <option value="eingang">Wareneingänge</option>
+                            <option value="ausgang">Warenausgänge</option>
+                            <option value="anpassung">Bestandsanpassungen</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Produkt</label>
+                        <select id="bewegung-product-filter" class="form-select" onchange="filterBewegungen()">
+                            <option value="">Alle Produkte</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Zeitraum</label>
+                        <select id="bewegung-date-filter" class="form-select" onchange="filterBewegungen()">
+                            <option value="alle">Alle Zeiträume</option>
+                            <option value="heute">Heute</option>
+                            <option value="woche">Diese Woche</option>
+                            <option value="monat">Dieser Monat</option>
+                            <option value="custom">Benutzerdefiniert</option>
+                        </select>
+                    </div>
+                    
+                    <div class="flex items-end">
+                        <button onclick="resetBewegungsFilter()" class="btn btn-secondary w-full">
+                            <i data-lucide="filter-x" class="h-4 w-4"></i>
+                            Filter zurücksetzen
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Custom Date Range -->
+                <div id="bewegung-custom-date-range" class="hidden mt-4">
+                    <div class="grid grid-cols-2 gap-4 max-w-md">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Von</label>
+                            <input type="date" id="bewegung-date-from" class="form-input" onchange="filterBewegungen()">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Bis</label>
+                            <input type="date" id="bewegung-date-to" class="form-input" onchange="filterBewegungen()">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Search Bar -->
+                <div class="mt-4">
+                    <label class="block text-sm font-medium mb-2">Suche</label>
+                    <div class="relative">
+                        <i data-lucide="search" class="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"></i>
+                        <input type="text" id="bewegung-search" class="form-input pl-10" 
+                               placeholder="Produkt, Referenz, Notiz..." onkeyup="filterBewegungen()">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Movements List -->
+            <div class="card p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold">Lagerbewegungen</h2>
+                    <div class="text-sm text-gray-500">
+                        <span id="bewegungen-count">0</span> Bewegungen gefunden
+                    </div>
+                </div>
+                <div id="bewegungen-list" class="space-y-4">
+                    <div class="text-center py-12">
+                        <div class="text-4xl mb-4">🚚</div>
+                        <p class="text-gray-500">Noch keine Lagerbewegungen vorhanden.</p>
+                        <p class="text-sm text-gray-400 mt-2">Verwenden Sie die Schaltflächen oben, um Wareneingänge oder -ausgänge zu erfassen.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Konten Tab -->
+        <div id="content-konten" class="tab-content">
+            <!-- Search Bar -->
+            <div class="mb-6">
+                <div class="relative">
+                    <i data-lucide="search" class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4"></i>
+                    <input type="text" class="form-input pl-10" placeholder="🔍 Konto suchen - Nummer, Name oder Kategorie..." id="konten-search" onkeyup="filterKonten()">
+                </div>
+            </div>
+
+            <!-- SKR03 Header -->
+            <div class="card p-8 mb-6" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white;">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-4">
+                        <i data-lucide="book-open" class="h-12 w-12"></i>
+                        <div>
+                            <h2 class="text-2xl font-bold mb-1">SKR03 Kontenrahmen</h2>
+                            <p class="opacity-90">Standardkontenrahmen für kleine und mittlere Unternehmen</p>
+                        </div>
+                    </div>
+                    <button class="btn btn-secondary" onclick="openKontoModal()" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white;" data-admin-only>                        <i data-lucide="plus" class="h-4 w-4"></i>
+                        Neues Konto
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-8 mt-8">
+                    <div class="text-center">
+                        <div id="konto-count-total" class="text-3xl font-bold mb-1">0</div>
+                        <div class="text-sm opacity-90">Gesamt Konten</div>
+                    </div>
+                    <div class="text-center">
+                        <div id="konto-count-ertrag" class="text-3xl font-bold mb-1">0</div>
+                        <div class="text-sm opacity-90">Einnahmekonten</div>
+                    </div>
+                    <div class="text-center">
+                        <div id="konto-count-aufwand" class="text-3xl font-bold mb-1">0</div>
+                        <div class="text-sm opacity-90">Ausgabenkonten</div>
+                    </div>
+                    <div class="text-center">
+                        <div id="konto-count-bilanz" class="text-3xl font-bold mb-1">0</div>
+                        <div class="text-sm opacity-90">Bilanzkonten</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Einnahmekonten (Example - will be replaced by dynamic content) -->
+            <div id="konten-categories">
+                <div class="card overflow-hidden mb-4">
+                    <div class="bg-green-600 text-white px-6 py-4 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <i data-lucide="trending-up" class="h-5 w-5"></i>
+                            <span class="font-semibold">Einnahmekonten</span>
+                        </div>
+                        <span class="bg-white bg-opacity-20 px-2 py-1 rounded text-sm font-semibold">4</span>
+                    </div>
+                    
+                    <div class="divide-y divide-gray-100">
+                        <div class="px-6 py-4 flex justify-between items-center">
+                            <div>
+                                <div class="font-semibold text-gray-900 mb-1">Nachlässe auf Wareneinkäufe</div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="bg-green-600 text-white px-2 py-1 rounded text-sm font-semibold">3400</span>
+                                <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm font-medium">Ertrag</span>
+                            </div>
+                        </div>
+                        
+                        <div class="px-6 py-4 flex justify-between items-center">
+                            <div>
+                                <div class="font-semibold text-gray-900 mb-1">Sonstige betriebliche Erträge</div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="bg-green-600 text-white px-2 py-1 rounded text-sm font-semibold">4280</span>
+                                <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm font-medium">Ertrag</span>
+                            </div>
+                        </div>
+                        
+                        <div class="px-6 py-4 flex justify-between items-center">
+                            <div>
+                                <div class="font-semibold text-gray-900 mb-1">Erträge aus Anlagevermögen</div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="bg-green-600 text-white px-2 py-1 rounded text-sm font-semibold">4300</span>
+                                <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm font-medium">Ertrag</span>
+                            </div>
+                        </div>
+                        
+                        <div class="px-6 py-4 flex justify-between items-center">
+                            <div>
+                                <div class="font-semibold text-gray-900 mb-1">Erträge aus anderen Wertpapieren</div>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <span class="bg-green-600 text-white px-2 py-1 rounded text-sm font-semibold">4400</span>
+                                <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm font-medium">Ertrag</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Berichte Tab -->
+        <div id="content-berichte" class="tab-content">
+            <div class="space-y-6">
+                <!-- Current Data Path Info -->
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-3">
+                            <i data-lucide="folder" class="h-5 w-5 text-gray-600"></i>
+                            <div>
+                                <div class="font-medium text-gray-900">Aktueller Datenordner</div>
+                                <div id="current-data-path" class="text-sm text-gray-600">Wird geladen...</div>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="loadFromFolder()" class="btn btn-sm btn-blue">
+                                <i data-lucide="folder-open" class="h-4 w-4"></i>
+                                Daten laden
+                            </button>
+                            <button onclick="exportDataWithStructure()" class="btn btn-sm btn-green">
+                                <i data-lucide="save" class="h-4 w-4"></i>
+                                Daten speichern
+                            </button>
+                            <button onclick="resetDataPath()" class="btn btn-sm btn-secondary">
+                                <i data-lucide="settings" class="h-4 w-4"></i>
+                                Ordner ändern
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- File Management Section -->
+                <div class="card p-6">
+                    <h3 class="text-xl font-semibold mb-4 flex items-center gap-2">
+                        <i data-lucide="file-text" class="h-5 w-5 text-blue-600"></i>
+                        Datenverwaltung
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- Auto-Save Status -->
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i data-lucide="clock" class="h-4 w-4 text-blue-600"></i>
+                                <span class="font-medium text-blue-800">Auto-Backup</span>
+                            </div>
+                            <div class="text-sm text-blue-600" id="last-backup-time">Wird geladen...</div>
+                            <button onclick="createAutoSave()" class="btn btn-xs btn-blue mt-2">
+                                Jetzt sichern
+                            </button>
+                        </div>
+                        
+                        <!-- Quick Actions -->
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i data-lucide="zap" class="h-4 w-4 text-green-600"></i>
+                                <span class="font-medium text-green-800">Schnellaktionen</span>
+                            </div>
+                            <div class="space-y-2">
+                                <button onclick="exportDataWithStructure()" class="btn btn-xs btn-green w-full">
+                                    <i data-lucide="download" class="h-3 w-3"></i>
+                                    Vollexport
+                                </button>
+                                <button onclick="loadFromFolder()" class="btn btn-xs btn-secondary w-full">
+                                    <i data-lucide="upload" class="h-3 w-3"></i>
+                                    Import
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- File Status -->
+                        <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i data-lucide="info" class="h-4 w-4 text-purple-600"></i>
+                                <span class="font-medium text-purple-800">Dateistatus</span>
+                            </div>
+                            <div class="text-sm text-purple-600" id="file-status">
+                                Bereit für Datenoperationen
+                            </div>
+                            <button onclick="showFileInfo()" class="btn btn-xs btn-secondary mt-2">
+                                Details anzeigen
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Report Generation Header -->
+                <div class="card p-8" style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: white;">
+                    <div class="flex items-center gap-4 mb-4">
+                        <i data-lucide="bar-chart-3" class="h-12 w-12"></i>
+                        <div>
+                            <h2 class="text-2xl font-bold mb-1">Berichte & Analysen</h2>
+                            <p class="opacity-90">Exportieren Sie detaillierte Finanzberichte als Excel-Dateien</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Report Configuration -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Report Settings -->
+                    <div class="card p-6">
+                        <h3 class="text-xl font-semibold mb-6 flex items-center gap-2">
+                            <i data-lucide="settings" class="h-5 w-5 text-blue-600"></i>
+                            Berichts-Einstellungen
+                        </h3>
+                        
+                        <div class="space-y-4">
+                            <!-- Berichtstyp -->
+                            <div>
+                                <label class="form-label">Berichtstyp</label>
+                                <select id="report-type" class="form-input">
+                                    <option value="vollstaendig">Vollständiger Finanzbericht</option>
+                                    <option value="buchungen">Nur Buchungen</option>
+                                    <option value="lager">Lager & Inventar</option>
+                                    <option value="gewinn-verlust">Gewinn & Verlust</option>
+                                </select>
+                            </div>
+
+                            <!-- Zeitraum -->
+                            <div>
+                                <label class="form-label">Zeitraum</label>
+                                <select id="time-period" class="form-input" onchange="toggleCustomDateRange()">
+                                    <option value="alles">Gesamter Zeitraum</option>
+                                    <option value="heute">Heute</option>
+                                    <option value="diese-woche">Diese Woche</option>
+                                    <option value="dieser-monat">Dieser Monat</option>
+                                    <option value="dieses-jahr">Dieses Jahr</option>
+                                    <option value="custom">Benutzerdefiniert</option>
+                                </select>
+                            </div>
+
+                            <!-- Custom Date Range -->
+                            <div id="custom-date-range" class="hidden space-y-3">
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="form-label">Von</label>
+                                        <input type="date" id="date-from" class="form-input">
+                                    </div>
+                                    <div>
+                                        <label class="form-label">Bis</label>
+                                        <input type="date" id="date-to" class="form-input">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Export Button -->
+                            <div class="pt-4">
+                                <button onclick="generateExcelReportWithStructure()" class="btn btn-blue w-full">
+                                    <i data-lucide="download" class="h-5 w-5"></i>
+                                    Excel-Bericht generieren
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Report Preview -->
+                    <div class="card p-6">
+                        <h3 class="text-xl font-semibold mb-6 flex items-center gap-2">
+                            <i data-lucide="eye" class="h-5 w-5 text-green-600"></i>
+                            Berichts-Vorschau
+                        </h3>
+                        
+                        <div class="space-y-4">
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <h4 class="font-semibold text-gray-800 mb-2">📊 Blatt 1: Gesamtübersicht</h4>
+                                <ul class="text-sm text-gray-600 space-y-1">
+                                    <li>• Alle Buchungen chronologisch sortiert</li>
+                                    <li>• Detaillierte Transaktionsdaten</li>
+                                    <li>• Kategorien und Beschreibungen</li>
+                                    <li>• Datum, Betrag, Typ</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <h4 class="font-semibold text-gray-800 mb-2">📈 Blatt 2: Zusammenfassung</h4>
+                                <ul class="text-sm text-gray-600 space-y-1">
+                                    <li>• KPI-Übersicht (Umsatz, Kosten, Gewinn)</li>
+                                    <li>• Monatliche/Jährliche Aufschlüsselung</li>
+                                    <li>• Kategorie-Auswertungen</li>
+                                    <li>• Lager-Statistiken</li>
+                                </ul>
+                            </div>
+
+                            <!-- Quick Stats -->
+                            <div class="border-t pt-4">
+                                <h4 class="font-semibold text-gray-800 mb-3">Aktuelle Statistiken</h4>
+                                <div class="grid grid-cols-2 gap-3 text-sm">
+                                    <div class="bg-blue-50 p-3 rounded-lg">
+                                        <div class="text-blue-800 font-semibold">Buchungen</div>
+                                        <div class="text-blue-600" id="stats-buchungen">0</div>
+                                    </div>
+                                    <div class="bg-green-50 p-3 rounded-lg">
+                                        <div class="text-green-800 font-semibold">Produkte</div>
+                                        <div class="text-green-600" id="stats-produkte">0</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Reports -->
+                <div class="card p-6">
+                    <h3 class="text-xl font-semibold mb-6 flex items-center gap-2">
+                        <i data-lucide="history" class="h-5 w-5 text-purple-600"></i>
+                        Schnelle Berichte
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <button onclick="generateQuickReport('heute')" class="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all">
+                            <i data-lucide="calendar" class="h-8 w-8 text-gray-400 mx-auto mb-2"></i>
+                            <div class="font-semibold text-gray-700">Heute</div>
+                            <div class="text-sm text-gray-500">Heutige Buchungen</div>
+                        </button>
+                        
+                        <button onclick="generateQuickReport('monat')" class="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 hover:bg-green-50 transition-all">
+                            <i data-lucide="calendar-days" class="h-8 w-8 text-gray-400 mx-auto mb-2"></i>
+                            <div class="font-semibold text-gray-700">Dieser Monat</div>
+                            <div class="text-sm text-gray-500">Monatsbericht</div>
+                        </button>
+                        
+                        <button onclick="generateQuickReport('jahr')" class="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-all">
+                            <i data-lucide="calendar-range" class="h-8 w-8 text-gray-400 mx-auto mb-2"></i>
+                            <div class="font-semibold text-gray-700">Dieses Jahr</div>
+                            <div class="text-sm text-gray-500">Jahresbericht</div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bestellungen Tab -->
+        <div id="content-bestellungen" class="tab-content">
+            <div class="space-y-8">
+                <!-- Modern Header -->
+                <div class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-white">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h1 class="text-4xl font-bold mb-2">🛒 Bestellungen</h1>
+                            <p class="text-blue-100 text-lg">Verwalten Sie Ihre Bestellungen professionell</p>
+                        </div>
+                        <button onclick="openModernBestellungModal()" class="bg-white text-blue-600 hover:bg-blue-50 px-6 py-3 rounded-xl font-semibold transition-all shadow-lg hover:shadow-xl" data-admin-only>                            <i data-lucide="plus" class="h-5 w-5 inline mr-2"></i>
+                            Neue Bestellung
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Modern Stats Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div class="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
+                        <div class="flex items-center">
+                            <div class="bg-blue-100 p-3 rounded-lg">
+                                <i data-lucide="shopping-cart" class="h-6 w-6 text-blue-600"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm text-gray-600">Gesamt</p>
+                                <p class="text-2xl font-bold text-gray-900" id="bestellungen-total">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
+                        <div class="flex items-center">
+                            <div class="bg-yellow-100 p-3 rounded-lg">
+                                <i data-lucide="clock" class="h-6 w-6 text-yellow-600"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm text-gray-600">Offen</p>
+                                <p class="text-2xl font-bold text-gray-900" id="bestellungen-offen">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
+                        <div class="flex items-center">
+                            <div class="bg-green-100 p-3 rounded-lg">
+                                <i data-lucide="check-circle" class="h-6 w-6 text-green-600"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm text-gray-600">Erledigt</p>
+                                <p class="text-2xl font-bold text-gray-900" id="bestellungen-erledigt">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
+                        <div class="flex items-center">
+                            <div class="bg-purple-100 p-3 rounded-lg">
+                                <i data-lucide="euro" class="h-6 w-6 text-purple-600"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm text-gray-600">Gesamtwert</p>
+                                <p class="text-2xl font-bold text-gray-900" id="bestellungen-wert">0,00 €</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modern Filter -->
+                <div class="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Status</label>
+                            <select id="modern-status-filter" class="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" onchange="modernFilterBestellungen()">
+                                <option value="alle">🔄 Alle Status</option>
+                                <option value="offen">⏳ Noch offen</option>
+                                <option value="abgeschlossen">✅ Abgeschlossen</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Händler</label>
+                            <select id="modern-haendler-filter" class="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" onchange="modernFilterBestellungen()">
+                                <option value="alle">🏪 Alle Händler</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Suche</label>
+                            <input type="text" id="modern-suche" class="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="🔍 Bezeichnung oder Sendung..." oninput="modernFilterBestellungen()">
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="modernClearFilters()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-3 rounded-lg font-medium transition-colors">
+                                <i data-lucide="x" class="h-4 w-4 inline mr-1"></i>
+                                Filter zurücksetzen
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modern Cards View -->
+                <div id="modern-bestellungen-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Cards werden hier eingefügt -->
+                </div>
+
+                <!-- Empty State -->
+        <div id="modern-empty-state" class="text-center py-16 hidden">
+            <div class="bg-gray-50 rounded-2xl p-12 border-2 border-dashed border-gray-200">
+                <i data-lucide="shopping-cart" class="h-16 w-16 text-gray-300 mx-auto mb-6"></i>
+                <h3 class="text-xl font-semibold text-gray-700 mb-2">Noch keine Bestellungen</h3>
+                <p class="text-gray-500 mb-6">Erstellen Sie Ihre erste Bestellung!</p>
+                <button onclick="openModernBestellungModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors">
+                    <i data-lucide="plus" class="h-4 w-4 inline mr-2"></i>
+                    Erste Bestellung erstellen
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <!-- Admin Tab -->
+    <div id="content-admin" class="tab-content" data-admin-only>
+        <div class="space-y-8">
+            <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-8 text-white">
+                <h1 class="text-4xl font-bold mb-2">🛠️ Admin</h1>
+                <p class="text-blue-100 text-lg">Chats und Kalender</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white rounded-xl shadow-lg border border-gray-100 min-h-[520px] flex flex-col">
+                    <div class="px-6 pt-6">
+                        <h2 class="text-xl font-semibold">💬 Chats</h2>
+                    </div>
+                    <div id="chat-module" class="flex flex-col lg:flex-row flex-1 overflow-hidden px-6 pb-6">
+                        <div id="chat-sidebar" class="w-full lg:w-[280px] lg:border-r border-b lg:border-b-0 border-gray-200 flex flex-col">
+                            <div class="p-4">
+                                <input id="chat-search" type="text" placeholder="Suchen: Name oder E-Mail" class="w-full p-2 border rounded mb-2">
+                                <div id="user-suggestions" class="border rounded mb-2 hidden max-h-40 overflow-y-auto bg-white shadow"></div>
+                                <button id="new-chat-btn" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded">+ Neue Nachricht</button>
+                            </div>
+                            <div id="conversation-list" class="flex-1 overflow-y-auto"></div>
+                            <div id="no-conversations" class="p-4 text-center text-gray-500">Noch keine Chats – ➕ Neue Nachricht</div>
+                        </div>
+                        <div id="chat-main" class="flex-1 flex flex-col">
+                            <div id="chat-header" class="p-4 border-b border-gray-200 hidden"></div>
+                            <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-2"></div>
+                            <div id="chat-empty" class="flex-1 p-4 text-gray-500 hidden"></div>
+                            <form id="chat-input-form" class="p-4 border-t border-gray-200 flex items-end space-x-2 hidden">
+                                <textarea id="chat-input" placeholder="Nachricht schreiben …" class="flex-1 border rounded p-2 resize-none" rows="1"></textarea>
+                                <input type="file" id="chat-attachment" accept="image/*,.pdf" class="hidden">
+                                <button type="button" id="chat-attach-btn" title="Anhang" class="p-2">📎</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
+                    <h2 class="text-xl font-semibold mb-4">📅 Kalender</h2>
+                    <div id="user-menu-calendar" class="text-gray-700">
+                        Kalender Platzhalter
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    </main>
+
+    <!-- Modern Bestellung Modal -->
+    <div id="modern-bestellung-modal" class="modal">
+        <div class="modal-content max-w-4xl">
+            <div class="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 rounded-t-2xl">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 id="modern-bestellung-modal-title" class="text-2xl font-bold">✨ Neue Bestellung</h2>
+                        <p class="text-blue-100 mt-1">Erstellen Sie eine neue Bestellung</p>
+                    </div>
+                    <button onclick="closeModernBestellungModal()" class="text-white hover:bg-white/20 p-2 rounded-lg">
+                        <i data-lucide="x" class="h-6 w-6"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <form id="modern-bestellung-form" onsubmit="saveModernBestellung(event)">
+                <div class="p-8 space-y-8">
+                    <!-- Grunddaten -->
+                    <div class="bg-gray-50 rounded-xl p-6">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                            <i data-lucide="info" class="h-5 w-5 mr-2 text-blue-600"></i>
+                            Grunddaten
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">📅 Datum *</label>
+                                <input type="date" id="modern-datum" class="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">🏷️ Bezeichnung *</label>
+                                <input type="text" id="modern-bezeichnung" class="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Was wurde bestellt?" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Händler & Details -->
+                    <div class="bg-gray-50 rounded-xl p-6">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                            <i data-lucide="store" class="h-5 w-5 mr-2 text-green-600"></i>
+                            Händler & Details
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">🏪 Händler *</label>
+                                <input type="text" id="modern-haendler" class="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Bei wem bestellt?" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">📦 Menge</label>
+                                <input type="number" id="modern-menge" class="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" min="1" placeholder="Anzahl">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">💰 Betrag</label>
+                                <input type="number" id="modern-betrag" class="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" step="0.01" placeholder="0,00 €">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Versand & Notizen -->
+                    <div class="bg-gray-50 rounded-xl p-6">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                            <i data-lucide="truck" class="h-5 w-5 mr-2 text-purple-600"></i>
+                            Versand & Notizen
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">📮 Sendungsnummer</label>
+                                <input type="text" id="modern-sendungsnummer" class="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Tracking-Nummer (optional)">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 mb-2">📝 Notizen</label>
+                                <textarea id="modern-notizen" class="w-full p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" rows="2" placeholder="Zusätzliche Informationen..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-gray-50 px-8 py-6 rounded-b-2xl flex justify-end space-x-4">
+                    <button type="button" onclick="closeModernBestellungModal()" class="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors">
+                        <i data-lucide="x" class="h-4 w-4 inline mr-2"></i>
+                        Abbrechen
+                    </button>
+                    <button type="submit" class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors shadow-lg">
+                        <i data-lucide="save" class="h-4 w-4 inline mr-2"></i>
+                        Speichern
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    
+    <!-- Booking Modal -->
+    <div id="booking-modal" class="modal">
+        <div class="modal-content p-6" style="width: 100%; max-width: 700px;">
+            <div class="flex justify-between items-center mb-6">
+                <div class="flex items-center gap-3">
+                    <div id="modal-icon" class="p-2 rounded-full bg-blue-100">
+                        <i data-lucide="plus-circle" class="h-6 w-6 text-blue-600"></i>
+                    </div>
+                    <div>
+                        <h2 id="modal-title" class="text-xl font-semibold">Neue Buchung</h2>
+                        <p id="modal-subtitle" class="text-sm text-gray-600">Professionelle Buchungserfassung</p>
+                    </div>
+                </div>
+                <button onclick="closeBookingModal()" class="text-gray-400 hover:text-gray-600">
+                    <i data-lucide="x" class="h-6 w-6"></i>
+                </button>
+            </div>
+            
+            <form id="booking-form">
+                <!-- Customer/Supplier Information -->
+                <div class="bg-purple-50 rounded-lg p-4 mb-6">
+                    <h3 class="font-semibold text-purple-900 mb-3 flex items-center gap-2">
+                        <i data-lucide="user" class="h-4 w-4"></i>
+                        Kunde/Lieferant Information
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Name/Firma *</label>
+                            <input type="text" id="booking-kunde-name" class="form-input" required
+                                   placeholder="z.B. Mustermann GmbH">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Rechnungsnummer</label>
+                            <input type="text" id="booking-rechnung-nummer" class="form-input" 
+                                   placeholder="z.B. R001, R002..." onblur="validateInvoiceNumber()">
+                            <p class="text-xs text-gray-500 mt-1">Format: R001, R002, etc. (pro Kunde/Firma eindeutig)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Booking Details -->
+                <div class="bg-blue-50 rounded-lg p-4 mb-6">
+                    <h3 class="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                        <i data-lucide="file-text" class="h-4 w-4"></i>
+                        Buchungsdetails
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Beschreibung *</label>
+                            <input type="text" id="booking-beschreibung" class="form-input" required
+                                   placeholder="z.B. Beratungsleistung, Wareneinkauf...">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Datum *</label>
+                            <input type="date" id="booking-datum" class="form-input" required>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Bruttobetrag (€) *</label>
+                            <input type="number" id="booking-betrag" class="form-input" step="0.01" min="0" required 
+                                   placeholder="0.00" onchange="calculateNetAmount()" oninput="calculateNetAmount()">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-2">MwSt. (%)</label>
+                            <select id="booking-mwst" class="form-select" onchange="calculateNetAmount()">
+                                <option value="19">19% (Standard)</option>
+                                <option value="7">7% (Ermäßigt)</option>
+                                <option value="0">0% (Steuerbefreit)</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Nettobetrag (€)</label>
+                            <input type="number" id="booking-netto" class="form-input" step="0.01" readonly
+                                   placeholder="Wird berechnet...">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Account & Category -->
+                <div class="bg-green-50 rounded-lg p-4 mb-6">
+                    <h3 class="font-semibold text-green-900 mb-3 flex items-center gap-2">
+                        <i data-lucide="folder" class="h-4 w-4"></i>
+                        Konten & Kategorien
+                    </h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Buchungskonto *</label>
+                            <input type="text" id="booking-konto" class="form-input mb-2" list="booking-konto-options" placeholder="Konto suchen..." required>
+                            <datalist id="booking-konto-options"></datalist>
+                            <p class="text-xs text-gray-500 mt-1">Wählen Sie das passende Buchungskonto aus</p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Kategorie</label>
+                            <input type="text" id="booking-kategorie" class="form-input mb-2" list="booking-kategorie-options" placeholder="Kategorie suchen...">
+                            <datalist id="booking-kategorie-options">
+                                <option value="Beratung"></option>
+                                <option value="Dienstleistung"></option>
+                                <option value="Wareneinkauf"></option>
+                                <option value="Warenverkauf"></option>
+                                <option value="Marketing"></option>
+                                <option value="Büromaterial"></option>
+                                <option value="Reisekosten"></option>
+                                <option value="Software"></option>
+                                <option value="Miete"></option>
+                                <option value="Versicherung"></option>
+                                <option value="Sonstiges"></option>
+                            </datalist>
+                            <p class="text-xs text-gray-500 mt-1">Kategorie wählen (optional)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Additional Notes -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium mb-2">Zusätzliche Notizen</label>
+                    <textarea id="booking-notizen" class="form-input" rows="3"
+                              placeholder="Weitere Details zur Buchung..."></textarea>
+                </div>
+                
+                <!-- Attachment Upload -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium mb-2">Beleg (PDF)</label>
+                    <input type="file" id="booking-beleg" class="form-input" accept="application/pdf">
+                </div>
+
+                <!-- Invoice Number Validation -->
+                <div id="invoice-validation" class="hidden mb-4 p-3 rounded-lg">
+                    <div class="flex items-center gap-2">
+                        <i data-lucide="alert-circle" class="h-4 w-4"></i>
+                        <span id="validation-message" class="text-sm font-medium"></span>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end space-x-3 pt-4 border-t">
+                    <button type="button" onclick="closeBookingModal()" class="btn btn-secondary">
+                        <i data-lucide="x" class="h-4 w-4"></i>
+                        Abbrechen
+                    </button>
+                    <button type="submit" id="booking-submit-btn" class="btn btn-blue">
+                        <i data-lucide="save" class="h-4 w-4"></i>
+                        Buchung speichern
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Product Modal -->
+    <div id="product-modal" class="modal">
+        <div class="modal-content p-6" style="width: 100%; max-width: 700px;">
+            <div class="flex justify-between items-center mb-6">
+                <h2 id="product-modal-title" class="text-xl font-semibold">Neues Produkt anlegen</h2>
+                <button onclick="closeProductModal()" class="text-gray-500" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            </div>
+            <form id="product-form">
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Produktname *</label>
+                            <input type="text" id="product-name" class="form-input" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Artikelnummer</label>
+                            <input type="text" id="product-artikelnummer" class="form-input">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Beschreibung</label>
+                        <input type="text" id="product-beschreibung" class="form-input">
+                    </div>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Preis Netto (€) *</label>
+                            <input type="number" step="0.01" id="product-preis-netto" class="form-input" required onchange="calculateProductPrice()">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">MwSt-Satz</label>
+                            <select id="product-mwst-satz" class="form-input" onchange="calculateProductPrice()">
+                                <option value="19">19%</option>
+                                <option value="7">7%</option>
+                                <option value="0">0%</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Preis Brutto (€)</label>
+                            <input type="number" step="0.01" id="product-preis-brutto" class="form-input bg-gray-100" readonly>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Aktueller Bestand</label>
+                            <input type="number" id="product-bestand" class="form-input" value="0" min="0">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Mindestbestand</label>
+                            <input type="number" id="product-mindestbestand" class="form-input" value="5" min="0">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Kategorie</label>
+                            <input type="text" id="product-kategorie" class="form-input" placeholder="z.B. Elektronik">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Lieferant</label>
+                        <input type="text" id="product-lieferant" class="form-input" placeholder="Name des Lieferanten">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Varianten</label>
+                        <div id="product-varianten-list" class="space-y-2 mb-2"></div>
+                        <div class="flex gap-2">
+                            <input type="text" id="product-variant-name" class="form-input flex-grow" placeholder="Variante">
+                            <input type="number" id="product-variant-stock" class="form-input w-24" placeholder="Bestand" min="0">
+                            <button type="button" onclick="addVariant()" class="btn btn-sm bg-blue-600 text-white hover:bg-blue-700">Hinzufügen</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-4 mt-6">
+                    <button type="button" onclick="closeProductModal()" class="btn btn-secondary">Abbrechen</button>
+                    <button type="submit" id="product-submit-btn" class="btn btn-primary">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- User Modal -->
+    <div id="user-modal" class="modal" data-admin-only>
+        <div class="modal-content w-full max-w-md bg-white rounded-xl shadow-2xl p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-semibold">Benutzer anlegen</h2>
+                <button onclick="closeUserModal()" class="text-gray-500 hover:text-gray-700" aria-label="Schließen">&times;</button>
+            </div>
+            <form id="user-form" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Name *</label>
+                        <input type="text" id="user-name" class="form-input" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Geburtsdatum *</label>
+                        <input type="date" id="user-geburtsdatum" class="form-input" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Kürzel *</label>
+                        <input type="text" id="user-kuerzel" class="form-input" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Bereich *</label>
+                        <input type="text" id="user-bereich" class="form-input" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">E-Mail *</label>
+                        <input type="email" id="user-email" class="form-input" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Passwort *</label>
+                        <input type="password" id="user-password" class="form-input" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Rolle *</label>
+                        <select id="user-role" class="form-input">
+                            <option value="user">Nutzer</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-4 mt-6">
+                    <button type="button" onclick="closeUserModal()" class="btn btn-secondary">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- User List Modal -->
+    <div id="user-list-modal" class="modal" data-admin-only>
+        <div class="modal-content w-full max-w-lg bg-white rounded-xl shadow-2xl p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-semibold">Benutzer verwalten</h2>
+                <button onclick="closeUserListModal()" class="text-gray-500 hover:text-gray-700" aria-label="Schließen">&times;</button>
+            </div>
+            <div id="user-list-container" class="space-y-2 max-h-80 overflow-y-auto"></div>
+            <div class="flex justify-end mt-4">
+                <button type="button" onclick="closeUserListModal()" class="btn btn-secondary">Schließen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content w-full max-w-md bg-white rounded-xl shadow-2xl p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-semibold">Einstellungen</h2>
+                <button onclick="closeSettingsModal()" class="text-gray-500 hover:text-gray-700" aria-label="Schließen">&times;</button>
+            </div>
+            <form id="settings-form" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Altes Passwort</label>
+                    <input type="password" id="settings-old-password" class="form-input">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Neues Passwort</label>
+                    <input type="password" id="settings-password" class="form-input">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Passwort bestätigen</label>
+                    <input type="password" id="settings-confirm-password" class="form-input">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Automatisches Logout nach (Minuten)</label>
+                    <input type="number" id="settings-timeout" class="form-input" min="1">
+                </div>
+                <!-- Removed duplicated timeout input and stray container -->
+                <div class="flex justify-between items-center mt-6">
+                    <button type="button" onclick="logoutUser()" class="btn btn-danger">Abmelden</button>
+                    <div class="flex space-x-4">
+                        <button type="button" onclick="closeSettingsModal()" class="btn btn-secondary">Abbrechen</button>
+                        <button type="submit" class="btn btn-primary">Speichern</button>
+                    </div>
+                </div>
+            </form>
+            <p id="app-version" class="text-xs text-gray-400 text-center mt-4"></p>
+        </div>
+    </div>
+
+    <!-- Konto Modal -->
+    <div id="konto-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="konto-modal-title">Neues Konto</h3>
+                <button onclick="closeKontoModal()">&times;</button>            </div>
+            <form id="konto-form">
+                <div class="form-group">
+                    <label class="form-label">Kontonummer *</label>
+                    <input type="number" id="konto-nummer" class="form-input" required min="1000" max="9999" placeholder="z.B. 8000">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Kontoname *</label>
+                    <input type="text" id="konto-name" class="form-input" required placeholder="z.B. Sonstige Erträge">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Kontotyp (Einnahme/Ausgabe)</label>
+                    <select id="konto-typ" class="form-input">
+                        <option value="Ertrag">Einnahmekonto (Ertrag)</option>
+                        <option value="Aufwand">Ausgabenkonto (Aufwand)</option>
+                        <option value="Aktiv">Aktivkonto (Bilanz)</option>
+                        <option value="Passiv">Passivkonto (Bilanz)</option>
+                        <option value="Steuer">Steuerkonto</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Kategorie</label>
+                    <select id="konto-kategorie" class="form-input">
+                        <option value="Erträge">Erträge</option>
+                        <option value="Aufwendungen">Aufwendungen</option>
+                        <option value="Anlagevermögen">Anlagevermögen</option>
+                        <option value="Umlaufvermögen">Umlaufvermögen</option>
+                        <option value="Eigenkapital">Eigenkapital</option>
+                        <option value="Fremdkapital">Fremdkapital</option>
+                        <option value="Steuer">Steuer</option>
+                        <option value="Zahlungsmittel">Zahlungsmittel</option>
+                        <option value="Sonstiges">Sonstiges</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Beschreibung</label>
+                    <textarea id="konto-beschreibung" class="form-input" rows="3" placeholder="Optionale Beschreibung des Kontos"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeKontoModal()">Abbrechen</button>
+                    <button type="submit" class="btn btn-green">Konto anlegen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Modal -->
+    <div id="delete-modal" class="modal">
+        <div class="modal-content p-6" style="width: 100%; max-width: 400px;">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-semibold">Löschen bestätigen</h2>
+                <button onclick="closeDeleteModal()" class="text-gray-500" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            </div>
+            <div class="mb-6">
+                <p id="delete-message">Möchten Sie diesen Eintrag wirklich löschen?</p>
+            </div>
+            <div class="flex justify-end space-x-4">
+                <button type="button" onclick="closeDeleteModal()" class="btn btn-secondary">Abbrechen</button>
+                <button type="button" onclick="confirmDelete()" class="btn btn-danger">Löschen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Wareneingang Modal -->
+    <div id="wareneingang-modal" class="modal">
+        <div class="modal-content p-6" style="width: 100%; max-width: 600px;">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-semibold">Wareneingang erfassen</h2>
+                <button onclick="closeWareneingangModal()" class="text-gray-400 hover:text-gray-600">
+                    <i data-lucide="x" class="h-6 w-6"></i>
+                </button>
+            </div>
+            
+            <form id="wareneingang-form" onsubmit="saveWareneingang(event)">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-2">Produkt *</label>
+                        <select id="wareneingang-product" class="form-select" required>
+                            <option value="">Produkt auswählen</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Menge *</label>
+                        <input type="number" id="wareneingang-quantity" class="form-input" min="1" required oninput="calculateWareneingangTotals()">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Preis/Einheit (€)</label>
+                        <input type="number" id="wareneingang-price" class="form-input" step="0.01" min="0" oninput="calculateWareneingangTotals()">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Gesamtpreis (€)</label>
+                        <input type="number" id="wareneingang-total" class="form-input" step="0.01" min="0" oninput="calculateWareneingangFromTotal()">
+                        <div class="text-xs text-gray-500 mt-1">Wird automatisch berechnet oder kann manuell eingegeben werden</div>
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-2">Lieferant</label>
+                        <input type="text" id="wareneingang-supplier" class="form-input" placeholder="Name des Lieferanten">
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-2">Referenz/Bestellnummer</label>
+                        <input type="text" id="wareneingang-reference" class="form-input" placeholder="Bestellnummer, Lieferschein, etc.">
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-2">Rechnung (PDF)</label>
+                        <input type="file" id="wareneingang-beleg" class="form-input" accept="application/pdf">
+                    </div>
+
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-2">Notizen</label>
+                        <textarea id="wareneingang-notes" class="form-input" rows="3" placeholder="Zusätzliche Informationen..."></textarea>
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label class="flex items-center">
+                            <input type="checkbox" id="wareneingang-auto-booking" class="form-checkbox">
+                            <span class="ml-2 text-sm">Automatische Buchung erstellen (Wareneinkauf)</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="closeWareneingangModal()" class="btn btn-secondary">Abbrechen</button>
+                    <button type="submit" class="btn btn-green">
+                        <i data-lucide="package-plus" class="h-4 w-4"></i>
+                        Wareneingang erfassen
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Warenausgang Modal -->
+    <div id="warenausgang-modal" class="modal">
+        <div class="modal-content p-6" style="width: 100%; max-width: 600px;">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-semibold">Warenausgang erfassen</h2>
+                <button onclick="closeWarenausgangModal()" class="text-gray-400 hover:text-gray-600">
+                    <i data-lucide="x" class="h-6 w-6"></i>
+                </button>
+            </div>
+            
+            <form id="warenausgang-form" onsubmit="saveWarenausgang(event)">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-2">Produkt *</label>
+                        <select id="warenausgang-product" class="form-select" required onchange="updateAvailableStock()">
+                            <option value="">Produkt auswählen</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Menge *</label>
+                        <input type="number" id="warenausgang-quantity" class="form-input" min="1" required oninput="calculateWarenausgangTotals()">
+                        <div id="available-stock" class="text-xs text-gray-500 mt-1"></div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Verkaufspreis/Einheit (€)</label>
+                        <input type="number" id="warenausgang-price" class="form-input" step="0.01" min="0" oninput="calculateWarenausgangTotals()">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Gesamtpreis (€)</label>
+                        <input type="number" id="warenausgang-total" class="form-input" step="0.01" min="0" oninput="calculateWarenausgangFromTotal()">
+                        <div class="text-xs text-gray-500 mt-1">Wird automatisch berechnet oder kann manuell eingegeben werden</div>
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-2">Kunde/Empfänger</label>
+                        <input type="text" id="warenausgang-customer" class="form-input" placeholder="Name des Kunden oder Empfängers">
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-2">Referenz/Auftragsnummer</label>
+                        <input type="text" id="warenausgang-reference" class="form-input" placeholder="Auftragsnummer, Lieferschein, etc.">
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-2">Grund des Ausgangs</label>
+                        <select id="warenausgang-reason" class="form-select">
+                            <option value="verkauf">Verkauf</option>
+                            <option value="retoure">Retoure/Rückgabe</option>
+                            <option value="defekt">Defekt/Schwund</option>
+                            <option value="probe">Muster/Probe</option>
+                            <option value="intern">Interne Verwendung</option>
+                            <option value="sonstiges">Sonstiges</option>
+                        </select>
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium mb-2">Notizen</label>
+                        <textarea id="warenausgang-notes" class="form-input" rows="3" placeholder="Zusätzliche Informationen..."></textarea>
+                    </div>
+                    
+                    <div class="md:col-span-2">
+                        <label class="flex items-center">
+                            <input type="checkbox" id="warenausgang-auto-booking" class="form-checkbox" checked>
+                            <span class="ml-2 text-sm">Automatische Buchung erstellen (Warenverkauf/Ausgang)</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="closeWarenausgangModal()" class="btn btn-secondary">Abbrechen</button>
+                    <button type="submit" class="btn btn-red">
+                        <i data-lucide="package-minus" class="h-4 w-4"></i>
+                        Warenausgang erfassen
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bestandsanpassung Modal -->
+    <div id="stock-adjustment-modal" class="modal">
+        <div class="modal-content p-6" style="width: 100%; max-width: 500px;">
+            <div class="flex justify-between items-center mb-6">
+                <div class="flex items-center gap-3">
+                    <div id="stock-icon" class="p-2 rounded-full bg-blue-100">
+                        <i data-lucide="package" class="h-6 w-6 text-blue-600"></i>
+                    </div>
+                    <div>
+                        <h2 id="stock-modal-title" class="text-xl font-semibold">Bestand anpassen</h2>
+                        <p id="stock-modal-subtitle" class="text-sm text-gray-600">Lagerbestand einfach ändern</p>
+                    </div>
+                </div>
+                <button onclick="closeStockAdjustmentModal()" class="text-gray-500" style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            </div>
+
+            <form id="stock-adjustment-form" onsubmit="handleStockAdjustment(event)">
+                <!-- Produkt Info -->
+                <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                    <h3 class="font-semibold text-gray-900 mb-2" id="stock-product-name">Produkt</h3>
+                    <div class="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                        <div>
+                            <div>Aktueller Bestand: <span id="stock-current-amount" class="font-semibold text-blue-600">0</span> Stk.</div>
+                            <div>Mindestbestand: <span id="stock-min-amount" class="font-semibold">0</span> Stk.</div>
+                        </div>
+                        <div>
+                            <div>Preis pro Stück: <span id="stock-product-price" class="font-semibold text-green-600">0,00 €</span></div>
+                            <div class="mt-2"><span id="stock-total-value" class="font-semibold text-orange-600">Gesamtwert: 0,00 €</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Anpassung -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium mb-2" id="stock-adjustment-label">Menge eingeben</label>
+                    <div class="flex items-center gap-4">
+                        <input type="number" id="stock-adjustment-value" class="form-input" min="1" required 
+                               placeholder="Anzahl eingeben..." oninput="updateStockPreview()">
+                        <span class="text-sm text-gray-500">Stk.</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2" id="stock-result-preview">Neuer Bestand: -- Stk.</p>
+                </div>
+                
+                <!-- Preis pro Einheit -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium mb-2">Preis pro Einheit (€) <span class="text-gray-500">(optional)</span></label>
+                    <div class="flex items-center gap-4">
+                        <input type="number" id="stock-unit-price" class="form-input" min="0" step="0.01"
+                               placeholder="Preis pro Stück..." oninput="calculateStockTotals()">
+                        <span class="text-sm text-gray-500">€/Stk.</span>
+                    </div>
+                </div>
+                
+                <!-- Gesamtpreis -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium mb-2">Gesamtpreis (€) <span class="text-gray-500">(optional)</span></label>
+                    <div class="flex items-center gap-4">
+                        <input type="number" id="stock-total-price" class="form-input" min="0" step="0.01"
+                               placeholder="Gesamtpreis..." oninput="calculateStockFromTotal()">
+                        <span class="text-sm text-gray-500">€</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Wird automatisch berechnet oder kann manuell eingegeben werden</p>
+                </div>
+
+                <!-- Notiz (optional) -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium mb-2">Notiz (optional)</label>
+                    <input type="text" id="stock-adjustment-note" class="form-input" 
+                           placeholder="z.B. Nachlieferung, Inventur, Defekt...">
+                </div>
+
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="closeStockAdjustmentModal()" class="btn btn-secondary">Abbrechen</button>
+                    <button type="submit" id="stock-submit-btn" class="btn btn-green">
+                        <i data-lucide="check" class="h-4 w-4"></i>
+                        Bestand anpassen
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="modal active" style="background-color: rgba(0, 0, 0, 0.8); z-index: 2000;">
+        <div class="modal-content p-8 text-center" style="width: 100%; max-width: 400px;">
+            <div class="text-6xl mb-4">⚡</div>
+            <h2 class="text-xl font-semibold mb-4">Optispar wird geladen...</h2>
+            <p class="text-gray-600 mb-6">Die Anwendung wird initialisiert, bitte warten Sie einen Moment.</p>
+            <div class="flex justify-center">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- Erste Nutzung / Ordnerstruktur Modal -->
+    <div id="first-time-setup-modal" class="modal">
+        <div class="modal-content p-8" style="width: 100%; max-width: 800px;">
+            <div class="text-center mb-6">
+                <div class="text-6xl mb-4">📁</div>
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">Willkommen bei Optispar!</h2>
+                <p class="text-gray-600">Richten Sie Ihre lokale Datenorganisation ein</p>
+            </div>
+            
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+                <h3 class="font-semibold text-blue-900 mb-3">📋 Ihr Datenordner</h3>
+                <p class="text-sm text-blue-800 mb-4">Geben Sie den vollständigen Pfad zu Ihrem Optispar-Datenordner ein:</p>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-blue-900 mb-2">Vollständiger Pfad zu Ihrem Datenordner:</label>
+                    <input type="text" id="data-folder-path" class="w-full p-3 border border-blue-300 rounded-lg" 
+                           placeholder="C:\Users\optis\Desktop\Optispar" 
+                           value="C:\Users\optis\Desktop\Optispar">
+                    <p class="text-xs text-blue-600 mt-1">Beispiel: C:\Users\IhrName\Desktop\Optispar</p>
+                </div>
+                
+                <div class="bg-white border rounded p-4 font-mono text-sm">
+                    <div class="space-y-1">
+                        <div>📁 <strong>Ihr-Pfad/</strong></div>
+                        <div class="ml-4">📁 Buchungen/</div>
+                        <div class="ml-4">📁 Lager/</div>
+                        <div class="ml-4">📁 Berichte/</div>
+                        <div class="ml-4">📁 Backup/</div>
+                        <div class="ml-4">📁 Dokumente/</div>
+                        <div class="ml-4">📄 optispar-daten.json</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <h4 class="font-semibold text-green-800 mb-2">✅ Automatische Funktionen</h4>
+                    <ul class="text-sm text-green-700 space-y-1">
+                        <li>• Automatische Daten-Backups</li>
+                        <li>• Organisierte Excel-Exporte</li>
+                        <li>• Strukturierte Datenspeicherung</li>
+                        <li>• Einfache Datenmigration</li>
+                    </ul>
+                </div>
+                
+                <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                    <h4 class="font-semibold text-orange-800 mb-2">📂 Ordner-Funktionen</h4>
+                    <ul class="text-sm text-orange-700 space-y-1">
+                        <li>• <strong>Buchungen/</strong> Alle Finanzdaten</li>
+                        <li>• <strong>Lager/</strong> Produktdaten & Bewegungen</li>
+                        <li>• <strong>Berichte/</strong> Excel-Reports</li>
+                        <li>• <strong>Backup/</strong> Automatische Sicherungen</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                <div class="flex items-start">
+                    <div class="text-yellow-500 mr-3">⚠️</div>
+                    <div>
+                        <h4 class="font-semibold text-yellow-800 mb-1">Wichtiger Hinweis</h4>
+                        <p class="text-sm text-yellow-700">
+                            Die App funktioniert auch ohne diese Ordnerstruktur, aber mit der empfohlenen Organisation 
+                            haben Sie bessere Kontrolle über Ihre Daten und können einfacher Backups erstellen.
+                        </p>
+                        <p class="text-sm text-yellow-700 mt-2">
+                            <strong>Tipp:</strong> Ziehen Sie JSON-Dateien einfach auf die App, um sie zu importieren!
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Drag & Drop Zone -->
+            <div id="drop-zone" class="hidden border-2 border-dashed border-blue-300 rounded-lg p-8 text-center bg-blue-50 mb-6">
+                <div class="text-4xl mb-2">📁</div>
+                <p class="text-blue-800 font-medium">Datei hier ablegen zum Importieren</p>
+                <p class="text-sm text-blue-600">JSON-Dateien aus Ihrem Optispar-Ordner</p>
+            </div>
+
+            <div class="flex justify-between items-center">
+                <label class="flex items-center text-sm text-gray-600">
+                    <input type="checkbox" id="dont-show-setup-again" class="form-checkbox mr-2">
+                    Diese Meldung nicht mehr anzeigen
+                </label>
+                
+                <div class="space-x-3">
+                    <button onclick="createFolderStructureGuide()" class="btn btn-blue">
+                        <i data-lucide="folder-plus" class="h-4 w-4"></i>
+                        Anleitung herunterladen
+                    </button>
+                    <button onclick="resetDataPath()" class="btn btn-secondary">
+                        <i data-lucide="refresh-cw" class="h-4 w-4"></i>
+                        Ordner ändern
+                    </button>
+                    <button onclick="closeFirstTimeSetup()" class="btn btn-green">
+                        <i data-lucide="check" class="h-4 w-4"></i>
+                        Verstanden, weiter
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- File input for import -->
+    <input type="file" id="import-file-input" accept=".json" style="display: none;" onchange="handleFileImport(event)">
+
+    <!-- Notification container -->
+    <div id="notification" class="notification">
+        <div class="flex items-center">
+            <i data-lucide="check-circle" class="h-5 w-5 mr-2"></i>
+            <span id="notification-text"></span>
+        </div>
+    </div>
+    </div> <!-- end app -->
+    <!-- JavaScript -->
+    
+
+    
+
+
+<!-- Minimal HOTFIX: Loader/Overlay Failsafe (nicht-invasiv) -->
+
+    <script src="renderer.js"></script>
+</body>
+</html>
