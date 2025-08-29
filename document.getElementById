@@ -6989,7 +6989,9 @@
                     // Fallback: Create blob and trigger download manually
                     try {
                         const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-                        const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                        const blob = new Blob([wbout], {
+                            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                        });
                         
                         // Create download link
                         const downloadLink = document.createElement('a');
