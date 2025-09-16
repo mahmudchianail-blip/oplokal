@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BRICOFLOR | SCHATEX Teppichfliesen</title>
+    <style>
+        :root {
+            --primary-color: #1c3f60;
+            --secondary-color: #f4f6f8;
+            --accent-color: #e67e22;
+            --text-color: #2c3e50;
+            --light-text: #6c7a89;
+            --border-radius: 12px;
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--text-color);
+            background-color: #ffffff;
+            line-height: 1.6;
+        }
+
+        .ebay-wrapper {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 20px 16px 60px;
+            background-color: #ffffff;
+        }
+
+        .hero {
+            overflow: hidden;
+            border-radius: var(--border-radius);
+            box-shadow: 0 15px 40px rgba(28, 63, 96, 0.15);
+            margin-bottom: 24px;
+        }
+
+        .hero img {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        .action-buttons {
+            display: grid;
+            gap: 12px;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            margin-bottom: 18px;
+        }
+
+        .action-buttons a {
+            text-decoration: none;
+            text-align: center;
+            padding: 14px 18px;
+            background: var(--primary-color);
+            color: #ffffff;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            letter-spacing: 0.4px;
+            position: relative;
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .action-buttons a::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            transition: var(--transition);
+        }
+
+        .action-buttons a:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(28, 63, 96, 0.18);
+            background: #20496f;
+        }
+
+        .action-buttons a:hover::after {
+            left: 100%;
+        }
+
+        .lead-text {
+            text-align: center;
+            color: var(--light-text);
+            font-size: 1.02rem;
+            margin: 0 auto 32px;
+            max-width: 760px;
+        }
+
+        .info-grid {
+            display: grid;
+            gap: 20px;
+        }
+
+        .info-card {
+            background: var(--secondary-color);
+            border-radius: var(--border-radius);
+            padding: 24px;
+            box-shadow: 0 12px 30px rgba(28, 63, 96, 0.12);
+            border: 1px solid rgba(28, 63, 96, 0.06);
+        }
+
+        .info-card h2 {
+            margin-top: 0;
+            font-size: 1.35rem;
+            color: var(--primary-color);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .info-card p,
+        .info-card ul {
+            color: var(--light-text);
+            margin-bottom: 0;
+        }
+
+        .info-card ul {
+            padding-left: 18px;
+        }
+
+        .notes {
+            margin-top: 40px;
+            background: linear-gradient(135deg, rgba(28, 63, 96, 0.08), rgba(230, 126, 34, 0.12));
+            border-radius: var(--border-radius);
+            padding: 28px;
+            box-shadow: 0 15px 40px rgba(28, 63, 96, 0.14);
+            display: grid;
+            gap: 24px;
+        }
+
+        .note-item h3 {
+            margin-top: 0;
+            color: var(--primary-color);
+            font-size: 1.1rem;
+        }
+
+        .note-item p {
+            margin-bottom: 0;
+            color: var(--light-text);
+        }
+
+        @media (min-width: 768px) {
+            .info-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .notes {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 480px) {
+            .action-buttons a {
+                font-size: 0.95rem;
+                padding: 12px 16px;
+            }
+
+            .info-card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="ebay-wrapper">
+        <section class="hero">
+            <img src="https://via.placeholder.com/1200x400/1c3f60/ffffff?text=BRICOFLOR+%7C+SCHATEX+Teppichfliesen" alt="Banner BRICOFLOR SCHATEX Teppichfliesen">
+        </section>
+
+        <nav class="action-buttons">
+            <a href="#" target="_blank" rel="noopener">eBay Shop</a>
+            <a href="#" target="_blank" rel="noopener">Bewertungen</a>
+            <a href="#" target="_blank" rel="noopener">Kontaktieren Sie uns</a>
+        </nav>
+
+        <p class="lead-text">
+            Entdecken Sie die Vielfalt der SCHATEX Teppichfliesen bei BRICOFLOR – hier finden Sie hochwertige Bodenlösungen, die sich ganz einfach austauschen und individuell kombinieren lassen. Tauschen Sie diesen Text später durch Ihre persönliche Botschaft aus.
+        </p>
+
+        <section class="info-grid">
+            <article class="info-card">
+                <h2>Beschreibung</h2>
+                <p>
+                    Platzhaltertext für Ihre ausführliche Produktbeschreibung. Heben Sie hervor, warum SCHATEX Teppichfliesen eine hervorragende Wahl sind, gehen Sie auf Vorteile wie einfache Verlegung, hohe Strapazierfähigkeit und moderne Designs ein.
+                </p>
+            </article>
+
+            <article class="info-card">
+                <h2>Technische Daten</h2>
+                <ul>
+                    <li>Format / Größe: Bitte hier Ihre Maße ergänzen.</li>
+                    <li>Material: Fügen Sie die Materialangaben hinzu.</li>
+                    <li>Nutzungsklasse: Angaben zur Beanspruchung ergänzen.</li>
+                    <li>Rückenausstattung: Hier Ihre Produktdetails eintragen.</li>
+                    <li>Sonstige Informationen: Pflegehinweise, Garantie etc.</li>
+                </ul>
+            </article>
+
+            <article class="info-card">
+                <h2>Go Premium</h2>
+                <p>
+                    Präsentieren Sie alternative Premium-Produkte oder ergänzende Angebote. Nutzen Sie diesen Bereich, um Upgrades wie Akustikunterlagen, passende Sockelleisten oder exklusive Farbvarianten vorzustellen.
+                </p>
+            </article>
+        </section>
+
+        <section class="notes">
+            <div class="note-item">
+                <h3>Hinweis zur Farbdarstellung</h3>
+                <p>
+                    Bitte beachten Sie, dass Bildschirmdarstellungen vom tatsächlichen Produktfarbton abweichen können. Bestellen Sie bei Bedarf ein Muster, um sich vorab von Qualität und Farbgebung zu überzeugen.
+                </p>
+            </div>
+            <div class="note-item">
+                <h3>Ihre persönliche Beratung</h3>
+                <p>
+                    BRICOFLOR Musterstraße 12 | 12345 Musterstadt<br>
+                    Beratungshotline: 01234 / 567 890<br>
+                    Öffnungszeiten: Mo–Fr 09:00–18:00 Uhr | Sa 10:00–14:00 Uhr
+                </p>
+            </div>
+        </section>
+    </div>
+</body>
+</html>
